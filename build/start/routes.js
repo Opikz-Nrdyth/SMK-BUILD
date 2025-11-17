@@ -29,6 +29,8 @@ import WhatsAppController from '#controllers/whats_apps_controller';
 import DataSiswaPraRegistsController from '#controllers/data_siswa_pra_regists_controller';
 import ManifestController from '#controllers/manifest_controller';
 import DataPasswordsController from '#controllers/data_passwords_controller';
+import PengelolaanNilaiController from '#controllers/pengelolaan_nilais_controller';
+import { AutomationPembayaranService } from '#services/pembayaran';
 router
     .group(() => {
     router.get('/', [LandingPageController, 'Dashboard']);
@@ -49,6 +51,22 @@ router.get('/ppdb/success', [DataSiswasController, 'ppdbSuccess']);
 router.delete('/logout', [AuthenticationController, 'destroy']);
 router.post('/login', [AuthenticationController, 'store']);
 router.post('/register', [AuthenticationController, 'register']);
+router
+    .group(() => {
+    router.get('/pembayaran-spp', async () => {
+        return await new AutomationPembayaranService().generateSpp();
+    });
+    router.get('/pembayaran-up', async () => {
+        return await new AutomationPembayaranService().generateUP();
+    });
+    router.get('/pembayaran-du', async () => {
+        return await new AutomationPembayaranService().generateDU();
+    });
+})
+    .use(middleware.checkCron());
+router.get('/penetapan', async () => {
+    return await new AutomationPembayaranService().Penetapan();
+});
 router
     .group(() => {
     router.post('/initialize', [WhatsAppController, 'initialize']);
@@ -117,12 +135,18 @@ router
         .post('/manajemen-siswa/import', [DataSiswasController, 'importExcel'])
         .as('superadmin.siswa.import');
     router
+        .post('/manajemen-siswa/:id/resetPassword/', [DataSiswasController, 'resetPassword'])
+        .as('superadmin.siswa.resetPassword');
+    router
         .resource('/manajemen-guru', DataGurusController)
         .only(['index', 'create', 'store', 'edit', 'update', 'destroy'])
         .as('superadmin.guru');
     router
         .get('/manajemen-guru/:id/cekGuru/', [DataGurusController, 'cekUser'])
         .as('superadmin.guru.cekguru');
+    router
+        .post('/manajemen-guru/:id/resetPassword/', [DataGurusController, 'resetPassword'])
+        .as('superadmin.guru.resetPassword');
     router
         .get('/manajemen-guru/export', [DataGurusController, 'exportExcel'])
         .as('superadmin.guru.export');
@@ -136,6 +160,9 @@ router
     router
         .get('/manajemen-staf/:id/cekStaf/', [DataStafsController, 'cekUser'])
         .as('superadmin.staf.cekguru');
+    router
+        .post('/manajemen-staf/:id/resetPassword/', [DataStafsController, 'resetPassword'])
+        .as('superadmin.staf.resetPassword');
     router
         .get('/manajemen-staf/export', [DataStafsController, 'exportExcel'])
         .as('superadmin.staf.export');
@@ -201,6 +228,9 @@ router
             });
         })
             .as('superadmin.pembayaran.cetak');
+        router
+            .get('/laporan-pembayaran/penetapan/get', [DataPembayaranController, 'getNominalPenetapan'])
+            .as('superadmin.pembayaran.penetapan');
     });
     router.get('/partisipasi-ujian', [DataPembayaranController, 'partisipasiUjian']);
     router.post('/partisipasi-ujian/update-partisipasi-ujian', [
@@ -328,6 +358,29 @@ router
             .post('/laporan-absensi/bulk', [DataAbsensiController, 'storeBulk'])
             .as('guru.absensi.bulk');
     });
+    router.group(() => {
+        router
+            .get('/pengelolaan-nilai', [PengelolaanNilaiController, 'index'])
+            .as('guru.pengelolaan_nilai');
+        router
+            .get('/pengelolaan-nilai/data/:id', [PengelolaanNilaiController, 'getMapelByKelas'])
+            .as('guru.pengelolaan_nilai.mapel');
+        router
+            .get('/pengelolaan-nilai/dataUjian/:jenjang/:mapelId', [
+            PengelolaanNilaiController,
+            'getUjian',
+        ])
+            .as('guru.pengelolaan_nilai.ujian');
+        router
+            .get('/pengelolaan-nilai/dataNilai/:kelas/:mapel/:ujian', [
+            PengelolaanNilaiController,
+            'getNilai',
+        ])
+            .as('guru.pengelolaan_nilai.nilai');
+        router
+            .post('/pengelolaan-nilai/save/:kelas/:mapel/:ujian', [PengelolaanNilaiController, 'save'])
+            .as('guru.pengelolaan_nilai.save');
+    });
     router
         .resource('/manajemen-informasi', DataInformasiController)
         .only(['index', 'create', 'store', 'edit', 'update', 'destroy'])
@@ -394,9 +447,24 @@ router
             .post('/manajemen-siswa/import', [DataSiswasController, 'importExcel'])
             .as('staf.import');
         router
+            .post('/manajemen-siswa/:id/resetPassword/', [DataSiswasController, 'resetPassword'])
+            .as('staf.siswa.resetPassword');
+        router
             .resource('/manajemen-guru', DataGurusController)
             .only(['index', 'create', 'store', 'edit', 'update', 'destroy'])
             .as('staf.guru');
+        router
+            .get('/manajemen-guru/:id/cekGuru/', [DataGurusController, 'cekUser'])
+            .as('staf.guru.cekguru');
+        router
+            .post('/manajemen-guru/:id/resetPassword/', [DataGurusController, 'resetPassword'])
+            .as('staf.guru.resetPassword');
+        router
+            .get('/manajemen-guru/export', [DataGurusController, 'exportExcel'])
+            .as('staf.guru.export');
+        router
+            .post('/manajemen-guru/import', [DataGurusController, 'importExcel'])
+            .as('staf.guru.import');
         router
             .resource('/manajemen-wali-kelas', DataWaliKelasController)
             .only(['index'])
@@ -479,6 +547,12 @@ router
                 });
             })
                 .as('staf.pembayaran.cetak');
+            router
+                .get('/laporan-pembayaran/penetapan/get', [
+                DataPembayaranController,
+                'getNominalPenetapan',
+            ])
+                .as('staf.pembayaran.penetapan');
         });
     });
     router.group(() => {

@@ -51,6 +51,10 @@ export default function GuruLayout({ title, children }: LayoutProps) {
           name: 'Manajemen Nilai',
           path: '/guru/laporan-nilai',
         },
+        {
+          name: 'Pengelolaan Nilai',
+          path: '/guru/pengelolaan-nilai',
+        },
       ],
     },
     {

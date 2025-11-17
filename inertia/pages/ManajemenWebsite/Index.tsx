@@ -21,7 +21,7 @@ interface WebsiteSettings {
   yayasan: string
   lat: string
   long: string
-  text_login:string
+  text_login: string
 
   // Sambutan Kepala Sekolah
   headmaster_name: string
@@ -63,6 +63,15 @@ interface WebsiteSettings {
   editProfile: string
   lihatNilai: string
   ppdb: string
+
+  //pembayaran
+  penetapan_spp_10: string
+  penetapan_spp_11: string
+  penetapan_spp_12: string
+  penetapan_up: string
+  penetapan_ud_11: string
+  penetapan_ud_12: string
+  biaya_admin: string
 }
 
 export default function LandingPageManagement() {
@@ -88,7 +97,7 @@ export default function LandingPageManagement() {
     alumni: '',
     lat: '',
     long: '',
-    text_login:"",
+    text_login: '',
 
     // Sambutan Kepala Sekolah
     headmaster_name: '',
@@ -130,6 +139,14 @@ export default function LandingPageManagement() {
     editProfile: '0',
     lihatNilai: '0',
     ppdb: '0',
+
+    penetapan_spp_10: '0',
+    penetapan_spp_11: '0',
+    penetapan_spp_12: '0',
+    penetapan_up: '0',
+    penetapan_ud_11: '0',
+    penetapan_ud_12: '0',
+    biaya_admin: '0',
   })
 
   useEffect(() => {
@@ -230,6 +247,7 @@ export default function LandingPageManagement() {
     { id: 'social', name: 'Sosial Media', icon: 'fa-solid fa-share-nodes' },
     { id: 'seo', name: 'SEO & Meta', icon: 'fa-solid fa-magnifying-glass' },
     { id: 'ujian', name: 'Ujian', icon: 'fa-solid fa-file-pen' },
+    { id: 'pembayaran', name: 'Pembayaran', icon: 'fa-solid fa-money-bill' },
     { id: 'setting', name: 'Settings', icon: 'fa-solid fa-gears' },
   ]
 
@@ -863,6 +881,71 @@ export default function LandingPageManagement() {
                 <li>• Pinalty adalah pengurangan waktu ujian</li>
               </ul>
             </div>
+          </div>
+        )
+
+      case 'pembayaran':
+        return (
+          <div className="space-y-6">
+            <UniversalInput
+              type="currency"
+              name="penetapan_spp"
+              label="Penetapan SPP Kelas 10"
+              value={data?.penetapan_spp_10}
+              onChange={(value) => setData('penetapan_spp_10', value)}
+              placeholder="300.000"
+            />
+            <UniversalInput
+              type="currency"
+              name="penetapan_spp"
+              label="Penetapan SPP Kelas 11"
+              value={data?.penetapan_spp_11}
+              onChange={(value) => setData('penetapan_spp_11', value)}
+              placeholder="300.000"
+            />
+            <UniversalInput
+              type="currency"
+              name="penetapan_spp"
+              label="Penetapan SPP Kelas 12"
+              value={data?.penetapan_spp_12}
+              onChange={(value) => setData('penetapan_spp_12', value)}
+              placeholder="300.000"
+            />
+
+            <UniversalInput
+              type="currency"
+              name="penetapan_ud"
+              label="Penetapan Uang Daftar Ulang Kelas 11"
+              value={data?.penetapan_ud_11}
+              onChange={(value) => setData('penetapan_ud_11', value)}
+              placeholder="300.000"
+            />
+            <UniversalInput
+              type="currency"
+              name="penetapan_ud"
+              label="Penetapan Uang Daftar Ulang Kelas 12"
+              value={data?.penetapan_ud_12}
+              onChange={(value) => setData('penetapan_ud_12', value)}
+              placeholder="300.000"
+            />
+
+            <UniversalInput
+              type="currency"
+              name="penetapan_up"
+              label="Penetapan Uang Pangkal"
+              value={data?.penetapan_up}
+              onChange={(value) => setData('penetapan_up', value)}
+              placeholder="300.000"
+            />
+
+            <UniversalInput
+              type="currency"
+              name="biaya_admin"
+              label="Penetapan Biaya Admin Pembayaran"
+              value={data?.biaya_admin}
+              onChange={(value) => setData('biaya_admin', value)}
+              placeholder="4.000"
+            />
           </div>
         )
 

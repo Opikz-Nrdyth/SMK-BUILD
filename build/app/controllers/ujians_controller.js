@@ -165,6 +165,7 @@ export default class UjiansController {
                         namaUjian: bankSoal.namaUjian,
                         waktu: parseInt(bankSoal.waktu),
                         totalSoal: soalArray.length,
+                        tanggalUjian: bankSoal.tanggalUjian,
                     },
                     soalList: soalFormatted,
                     jawabanList: jawabans,
@@ -247,14 +248,22 @@ export default class UjiansController {
                 salah: '0',
                 jawabanFile: fileName,
             });
+            const mulai = new Date(bankSoal.tanggalUjian);
+            const durasi = parseInt(bankSoal.waktu);
+            const selesai = new Date(mulai.getTime() + durasi * 60 * 1000);
+            const dateNow = new Date();
+            const sisaMs = selesai.getTime() - dateNow.getTime();
+            const sisaDetik = Math.floor(sisaMs / 1000);
+            const sisaMenit = Math.floor(sisaDetik / 60);
             return inertia.render('SiswaPage/Ujian', {
                 ujianId,
                 kehadiranId: kehadiran.id,
                 bankSoal: {
                     id: bankSoal.id,
                     namaUjian: bankSoal.namaUjian,
-                    waktu: parseInt(bankSoal.waktu),
+                    waktu: sisaMenit,
                     totalSoal: soalArray.length,
+                    tanggalUjian: bankSoal.tanggalUjian,
                 },
                 soalList: soalFormatted,
                 jawabanList: jawabanKosong,

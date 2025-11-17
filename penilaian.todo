@@ -1,0 +1,78 @@
+{
+  "todotree": {
+    "tree": [
+      {
+        "key": 1762815988748,
+        "children": [
+          {
+            "key": 1762816006064,
+            "children": [],
+            "todo": {
+              "content": "Data Kelas",
+              "id": 1762816006064,
+              "level": "default",
+              "done": false,
+              "start": 1762816006064
+            }
+          },
+          {
+            "key": 1762816021687,
+            "children": [],
+            "todo": {
+              "content": "Data Mapel",
+              "id": 1762816021687,
+              "level": "default",
+              "done": false,
+              "start": 1762816021687
+            }
+          },
+          {
+            "key": 1762816038615,
+            "children": [],
+            "todo": {
+              "content": "Data Ujian",
+              "id": 1762816038615,
+              "level": "default",
+              "done": false,
+              "start": 1762816038615
+            }
+          },
+          {
+            "key": 1762816052344,
+            "children": [],
+            "todo": {
+              "content": "Cek DB Manajemen Penilaian",
+              "id": 1762816052344,
+              "level": "default",
+              "done": false,
+              "start": 1762816052344
+            }
+          }
+        ],
+        "todo": {
+          "content": "Database Awal",
+          "id": 1762815988748,
+          "level": "default",
+          "done": false,
+          "start": 1762815988748
+        }
+      }
+    ],
+    "expandKeys": [
+      1762815988748,
+      1762816006064
+    ],
+    "schema": "https://github.com/Saber2pr/vsc-ext-todolist/blob/master/src/api/type.ts#L3",
+    "add_mode": "bottom",
+    "virtual": false,
+    "timelines": [],
+    "showLine": false,
+    "playFontSize": 24,
+    "title": "penilaian",
+    "autoSort": false,
+    "showEndTime": false,
+    "simpleMode": false,
+    "lang": "en",
+    "version": "1762816081639"
+  }
+}

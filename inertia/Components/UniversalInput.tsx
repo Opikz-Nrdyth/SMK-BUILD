@@ -119,6 +119,7 @@ export default function UniversalInput({
   const [previewFiles, setPreviewFiles] = useState<string[]>([])
   const [viewPass, setViewPass] = useState<boolean>(false)
   const [dark, setDark] = useState(false)
+
   useEffect(() => {
     setDark(localStorage.theme == 'dark' || false)
   }, [localStorage])

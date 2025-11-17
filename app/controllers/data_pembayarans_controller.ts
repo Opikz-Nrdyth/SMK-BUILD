@@ -13,6 +13,8 @@ import { DateTime } from 'luxon'
 import DataSiswa from '#models/data_siswa'
 import DataGuru from '#models/data_guru'
 import DataKelas from '#models/data_kelas'
+import DataWebsite from '#models/data_website'
+import DataTahunAjaran from '#models/data_tahun_ajaran'
 
 export default class DataPembayaranController {
   public async index({ request, inertia, session, auth }: HttpContext) {
@@ -92,7 +94,10 @@ export default class DataPembayaranController {
     // Filter berdasarkan tanggal pembayaran
     if (tanggal) {
       const dateString = DateTime.fromISO(tanggal).toISODate()
-      query.whereRaw('JSON_EXTRACT(nominal_bayar, "$[*].tanggal") LIKE ?', [`%${dateString}%`])
+      query.whereRaw(
+        'JSON_VALID(nominal_bayar) AND JSON_EXTRACT(nominal_bayar, "$[*].tanggal") LIKE ?',
+        [`%${dateString}%`]
+      )
     }
 
     const pembayaranPaginate = await query
@@ -319,6 +324,7 @@ export default class DataPembayaranController {
 
     try {
       const payload = await request.validateUsing(pembayaranValidator)
+      const tahunAjaran = await DataTahunAjaran.query().orderBy('created_at', 'desc').first()
 
       // Cek apakah sudah ada data untuk siswa dan jenis pembayaran ini
       const existingData = await DataPembayaran.query()
@@ -354,6 +360,7 @@ export default class DataPembayaranController {
       // Jika tidak ada data existing, buat baru
       const pembayaranData = {
         ...payload,
+        tahunAjaran: tahunAjaran?.kodeTa,
         nominalBayar: JSON.stringify([]), // Initialize dengan array kosong
       }
 
@@ -803,6 +810,87 @@ export default class DataPembayaranController {
         error: error,
       })
       return response.redirect().withQs().back()
+    }
+  }
+
+  public async Penetapan() {
+    const dataWebsite = await DataWebsite.getAllSettings()
+    const biayaAdmin = parseInt(dataWebsite.biaya_admin) ?? 0
+    const spp10 = parseInt(dataWebsite.penetapan_spp_10) ?? 0
+    const spp11 = parseInt(dataWebsite.penetapan_spp_11) ?? 0
+    const spp12 = parseInt(dataWebsite.penetapan_spp_12) ?? 0
+    const up = parseInt(dataWebsite.penetapan_up) ?? 0
+    const du11 = parseInt(dataWebsite.penetapan_ud_11) ?? 0
+    const du12 = parseInt(dataWebsite.penetapan_ud_12) ?? 0
+    return {
+      NOMINAL_SPP_10: String(spp10 + biayaAdmin),
+      NOMINAL_SPP_11: String(spp11 + biayaAdmin),
+      NOMINAL_SPP_12: String(spp12 + biayaAdmin),
+      NOMINAL_UANG_PANGKAL: String(up + biayaAdmin),
+      NOMINAL_DAFTAR_ULANG_11: String(du11 + biayaAdmin),
+      NOMINAL_DAFTAR_ULANG_12: String(du12 + biayaAdmin),
+    }
+  }
+
+  public async getNominalPenetapan({ request, response }: HttpContext) {
+    const userId = request.input('user_id')
+    const jenisPembayaran = request.input('jenis_pembayaran')
+
+    if (!userId || !jenisPembayaran) {
+      return response.badRequest({ success: false, message: 'Param kurang' })
+    }
+
+    // Ambil siswa berdasarkan user_id
+    const siswa = await DataSiswa.query().where('userId', userId).select('nisn').first()
+
+    if (!siswa) {
+      return { success: false, message: 'Siswa tidak ditemukan' }
+    }
+
+    const nisn = siswa.nisn
+
+    // --- AMBIL DATA KELAS ---
+    const dataKelas = await DataKelas.query().whereIn('jenjang', ['10', '11', '12'])
+
+    const mappingJenjang: Record<string, string> = {}
+
+    dataKelas.forEach((kelas) => {
+      const list = JSON.parse(kelas.siswa) // berisi array NISN
+      list.forEach((n: string) => {
+        mappingJenjang[n] = kelas.jenjang
+      })
+    })
+
+    const jenjang = mappingJenjang[nisn]
+
+    if (!jenjang) {
+      return { success: false, message: 'Jenjang siswa tidak ditemukan di DataKelas' }
+    }
+
+    // --- HITUNG NOMINAL DARI DataWebsite ---
+    const p = (await this.Penetapan()) as any
+
+    let nominal = 0
+
+    switch (jenisPembayaran) {
+      case 'SPP':
+        nominal = p[`NOMINAL_SPP_${jenjang}`] || 0
+        break
+
+      case 'Uang Pangkal':
+        nominal = p.NOMINAL_UANG_PANGKAL
+        break
+
+      case 'Daftar Ulang':
+        nominal = p[`NOMINAL_DAFTAR_ULANG_${jenjang}`] || 0
+        break
+    }
+
+    return {
+      success: true,
+      nominal: Number(nominal),
+      jenjang,
+      sumber: 'DataWebsite',
     }
   }
 }

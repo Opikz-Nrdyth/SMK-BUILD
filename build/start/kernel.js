@@ -8,7 +8,7 @@ server.use([
     () => import('@adonisjs/vite/vite_middleware'),
     () => import('@adonisjs/inertia/inertia_middleware'),
     () => import('#middleware/log_visitor_middleware'),
-    () => import('@adonisjs/static/static_middleware')
+    () => import('@adonisjs/static/static_middleware'),
 ]);
 router.use([
     () => import('@adonisjs/core/bodyparser_middleware'),
@@ -18,6 +18,7 @@ router.use([
     () => import('@adonisjs/static/static_middleware'),
 ]);
 export const middleware = router.named({
+    checkCron: () => import('#middleware/check_cron_middleware'),
     webData: () => import('#middleware/web_data_middleware'),
     roleManajemen: () => import('#middleware/role_manajemen_middleware'),
     guest: () => import('#middleware/guest_middleware'),

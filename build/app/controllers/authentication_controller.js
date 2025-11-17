@@ -39,7 +39,17 @@ export default class AuthenticationController {
                 .where('email', email)
                 .preload('dataGuru')
                 .preload('dataStaf')
+                .preload('dataSiswa')
                 .firstOrFail();
+            if (cekUser?.role == 'Siswa') {
+                if (cekUser?.dataSiswa?.status != 'siswa') {
+                    session.flash({
+                        status: 'warning',
+                        message: 'Anda belum terdaftar sebagai siswa!. Harap tunggu informasi lebih lanjut',
+                    });
+                    return response.redirect().back();
+                }
+            }
             if (cekUser.dataGuru && cekUser.dataStaf) {
                 if (!role) {
                     session.flash({

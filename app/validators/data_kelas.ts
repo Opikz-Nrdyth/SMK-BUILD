@@ -7,5 +7,6 @@ export const kelasValidator = vine.compile(
     waliKelas: vine.string(),
     siswa: vine.array(vine.string()).minLength(1),
     guruPengampu: vine.array(vine.string()).minLength(1),
+    guruMapelMapping: vine.record(vine.array(vine.string())).optional(),
   })
 )

@@ -12,13 +12,7 @@ export default class DataPembayaran extends BaseModel {
   @column()
   declare userId: string
 
-  @column({
-    prepare: (value: string) => encryption.encrypt(value),
-    consume: (value: string | null) => {
-      if (!value) return null
-      return encryption.decrypt(value)
-    },
-  })
+  @column()
   declare jenisPembayaran: string
 
   @column({
@@ -41,6 +35,9 @@ export default class DataPembayaran extends BaseModel {
 
   @column()
   declare partisipasiUjian: boolean
+
+  @column()
+  declare tahunAjaran: string
 
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime

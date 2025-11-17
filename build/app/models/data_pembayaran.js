@@ -56,14 +56,7 @@ __decorate([
     __metadata("design:type", String)
 ], DataPembayaran.prototype, "userId", void 0);
 __decorate([
-    column({
-        prepare: (value) => encryption.encrypt(value),
-        consume: (value) => {
-            if (!value)
-                return null;
-            return encryption.decrypt(value);
-        },
-    }),
+    column(),
     __metadata("design:type", String)
 ], DataPembayaran.prototype, "jenisPembayaran", void 0);
 __decorate([
@@ -92,6 +85,10 @@ __decorate([
     column(),
     __metadata("design:type", Boolean)
 ], DataPembayaran.prototype, "partisipasiUjian", void 0);
+__decorate([
+    column(),
+    __metadata("design:type", String)
+], DataPembayaran.prototype, "tahunAjaran", void 0);
 __decorate([
     column.dateTime({ autoCreate: true }),
     __metadata("design:type", DateTime)

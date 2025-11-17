@@ -11,6 +11,7 @@ export default class extends BaseSchema {
       table.text('nominal_penetapan', 'longtext')
       table.text('nominal_bayar', 'longtext')
       table.boolean('partisipasi_ujian').defaultTo(false)
+      table.string('tahun_ajaran').nullable()
 
       table.timestamp('created_at')
       table.timestamp('updated_at')

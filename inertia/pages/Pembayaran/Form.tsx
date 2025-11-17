@@ -4,6 +4,7 @@ import UniversalInput from '~/Components/UniversalInput'
 import { Pembayaran } from './types'
 import SuperAdminLayout from '~/Layouts/SuperAdminLayouts'
 import StafLayout from '~/Layouts/StafLayouts'
+import { useNotification } from '~/Components/NotificationAlert'
 
 interface options {
   label: string
@@ -41,6 +42,8 @@ export default function Form({
       }
   )
 
+  const { notify } = useNotification()
+
   const { props } = usePage()
   const pattern = props?.pattern.split('/').filter((item: any) => item != '')
   const url = `/${pattern[0]}/${pattern[1]}`
@@ -54,6 +57,31 @@ export default function Form({
       setData(prefilledData)
     }
   }, [prefilledData])
+
+  const fetchNominal = async () => {
+    try {
+      const res = await fetch(
+        `${url}/penetapan/get?user_id=${data.userId}&jenis_pembayaran=${data.jenisPembayaran}`,
+        {
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        }
+      )
+
+      const result = await res.json()
+
+      if (result.success) {
+        setData('nominalPenetapan', String(result.nominal))
+      }
+    } catch (err) {
+      console.error('Gagal mengambil nominal penetapan:', err)
+    }
+  }
+
+  useEffect(() => {
+    if (data.userId && data.jenisPembayaran) {
+      fetchNominal()
+    }
+  }, [data.userId, data.jenisPembayaran])
 
   // Cek existing data ketika user dan jenis pembayaran dipilih
   useEffect(() => {
@@ -76,6 +104,7 @@ export default function Form({
 
       if (response.ok) {
         const result = await response.json()
+        console.log(result)
 
         // ✅ PERBAIKAN: Gunakan result.data bukan result.props.existingData
         if (result.success && result.exists && result.data) {
@@ -138,6 +167,11 @@ export default function Form({
       value: jenis,
     })) || []
 
+  const nominalBayar =
+    typeof confirmationData?.nominalBayar == 'string'
+      ? JSON.parse(confirmationData?.nominalBayar)
+      : confirmationData?.nominalBayar
+
   return (
     <div className="space-y-6">
       {/* Modal Konfirmasi */}
@@ -148,23 +182,23 @@ export default function Form({
 
             <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200 mb-4">
               <p className="text-yellow-800 mb-3">
-                Siswa <strong>{confirmationData.user?.fullName}</strong> sudah memiliki penetapan
-                pembayaran untuk <strong>{confirmationData.jenisPembayaran}</strong>.
+                Siswa <strong>{confirmationData?.user?.fullName}</strong> sudah memiliki penetapan
+                pembayaran untuk <strong>{confirmationData?.jenisPembayaran}</strong>.
               </p>
 
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span>Nominal Penetapan Saat Ini:</span>
                   <strong>
-                    {formatRupiah(parseFloat(confirmationData.nominalPenetapan || '0'))}
+                    {formatRupiah(parseFloat(confirmationData?.nominalPenetapan || '0'))}
                   </strong>
                 </div>
                 <div className="flex justify-between">
                   <span>Total Sudah Dibayar:</span>
                   <strong>
                     {formatRupiah(
-                      confirmationData.nominalBayar
-                        ? confirmationData.nominalBayar.reduce(
+                      nominalBayar
+                        ? nominalBayar?.reduce(
                             (total: number, bayar: any) => total + parseFloat(bayar.nominal || '0'),
                             0
                           )
@@ -228,8 +262,11 @@ export default function Form({
               type="currency"
               name="nominalPenetapan"
               label="Nominal Penetapan"
+              disabled
               value={data.nominalPenetapan}
-              onChange={(v: any) => setData('nominalPenetapan', v)}
+              onChange={(v: any) =>
+                notify('Anda tidak bisa membuat penetapan pembayaran manual', 'error')
+              }
               required
               dark={dark}
             />

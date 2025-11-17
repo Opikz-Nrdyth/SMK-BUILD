@@ -1,0 +1,439 @@
+{
+  "metadata": {
+    "mapelName": "Proyek Ilmu Pengetahuan Alam dan Sosial",
+    "kelasName": "X-TELIND-1",
+    "ujian": "uji coba"
+  },
+  "competence": [
+    "Siswa menunjukkan pemahaman yang baik terhadap materi. Mampu menerapkan konsep secara tepat dalam penyelesaian tugas dan proyek. Aktif berpartisipasi dalam pembelajaran, serta menunjukkan sikap disiplin dan tanggung jawab yang tinggi terhadap hasil kerjanya.",
+    "Siswa belum mampu memahami dan menerapkan konsep dengan baik. Hasil pekerjaan masih memerlukan bimbingan intensif. Partisipasi dalam pembelajaran kurang aktif, serta perlu meningkatkan kedisiplinan dan konsistensi dalam menyelesaikan tugas."
+  ],
+  "data": [
+    {
+      "nisn": "7002509001",
+      "nama": "AIDA FITRIYAR RAHMADANI",
+      "nilai": 100,
+      "calculated": {
+        "naFormatif": "43",
+        "naSumatif": "40",
+        "naSumatifFinal": 100,
+        "nilaiRaport": "61",
+        "ranking": 1
+      },
+      "structure": {
+        "formatif": [40, 60, 30],
+        "sumatif": [60, 20],
+        "nonTES": "100",
+        "tes": "16",
+        "deskripsi": "Siswa menunjukkan pemahaman yang baik terhadap materi. Mampu menerapkan konsep secara tepat dalam penyelesaian tugas dan proyek. Aktif berpartisipasi dalam pembelajaran, serta menunjukkan sikap disiplin dan tanggung jawab yang tinggi terhadap hasil kerjanya."
+      }
+    },
+    {
+      "nisn": "7002509002",
+      "nama": "Anindya Kirana Dyah Ayu",
+      "nilai": 80,
+      "calculated": {
+        "naFormatif": "0",
+        "naSumatif": "0",
+        "naSumatifFinal": 80,
+        "nilaiRaport": "27",
+        "ranking": 2
+      },
+      "structure": {
+        "formatif": [0, 0, 0],
+        "sumatif": [0, 0],
+        "deskripsi": "Siswa belum mampu memahami dan menerapkan konsep dengan baik. Hasil pekerjaan masih memerlukan bimbingan intensif. Partisipasi dalam pembelajaran kurang aktif, serta perlu meningkatkan kedisiplinan dan konsistensi dalam menyelesaikan tugas."
+      }
+    },
+    {
+      "nisn": "7002509003",
+      "nama": "ATHIFAH NISRIDA PUTRI",
+      "nilai": 100,
+      "calculated": {
+        "naFormatif": "0",
+        "naSumatif": "0",
+        "naSumatifFinal": 100,
+        "nilaiRaport": "33",
+        "ranking": 3
+      },
+      "structure": { "formatif": [0, 0, 0], "sumatif": [0, 0], "deskripsi": null }
+    },
+    {
+      "nisn": "7002509004",
+      "nama": "Cantika Larasati",
+      "nilai": 100,
+      "calculated": {
+        "naFormatif": "0",
+        "naSumatif": "0",
+        "naSumatifFinal": 100,
+        "nilaiRaport": "33",
+        "ranking": 4
+      },
+      "structure": { "formatif": [0, 0, 0], "sumatif": [0, 0], "deskripsi": null }
+    },
+    {
+      "nisn": "7002509005",
+      "nama": "DARA",
+      "nilai": 0,
+      "calculated": {
+        "naFormatif": "0",
+        "naSumatif": "0",
+        "naSumatifFinal": 0,
+        "nilaiRaport": "0",
+        "ranking": 5
+      },
+      "structure": { "formatif": [0, 0, 0], "sumatif": [0, 0], "deskripsi": null }
+    },
+    {
+      "nisn": "7002509006",
+      "nama": "DARSIH WIDIA NINGSIH",
+      "nilai": 100,
+      "calculated": {
+        "naFormatif": "0",
+        "naSumatif": "0",
+        "naSumatifFinal": 100,
+        "nilaiRaport": "33",
+        "ranking": 6
+      },
+      "structure": { "formatif": [0, 0, 0], "sumatif": [0, 0], "deskripsi": null }
+    },
+    {
+      "nisn": "7002509007",
+      "nama": "Disty Ramadhani Putri",
+      "nilai": 0,
+      "calculated": {
+        "naFormatif": "0",
+        "naSumatif": "0",
+        "naSumatifFinal": 0,
+        "nilaiRaport": "0",
+        "ranking": 7
+      },
+      "structure": { "formatif": [0, 0, 0], "sumatif": [0, 0], "deskripsi": null }
+    },
+    {
+      "nisn": "7002509008",
+      "nama": "Edy Kurniawan",
+      "nilai": 60,
+      "calculated": {
+        "naFormatif": "0",
+        "naSumatif": "0",
+        "naSumatifFinal": 60,
+        "nilaiRaport": "20",
+        "ranking": 8
+      },
+      "structure": { "formatif": [0, 0, 0], "sumatif": [0, 0], "deskripsi": null }
+    },
+    {
+      "nisn": "7002509009",
+      "nama": "Fahira Desviyanti",
+      "nilai": 100,
+      "calculated": {
+        "naFormatif": "0",
+        "naSumatif": "0",
+        "naSumatifFinal": 100,
+        "nilaiRaport": "33",
+        "ranking": 9
+      },
+      "structure": { "formatif": [0, 0, 0], "sumatif": [0, 0], "deskripsi": null }
+    },
+    {
+      "nisn": "7002509010",
+      "nama": "FAUZIAH PUTRI ZILVANA",
+      "nilai": 100,
+      "calculated": {
+        "naFormatif": "0",
+        "naSumatif": "0",
+        "naSumatifFinal": 100,
+        "nilaiRaport": "33",
+        "ranking": 10
+      },
+      "structure": { "formatif": [0, 0, 0], "sumatif": [0, 0], "deskripsi": null }
+    },
+    {
+      "nisn": "7002509011",
+      "nama": "HANDIKA SAPUTRA",
+      "nilai": 0,
+      "calculated": {
+        "naFormatif": "0",
+        "naSumatif": "0",
+        "naSumatifFinal": 0,
+        "nilaiRaport": "0",
+        "ranking": 11
+      },
+      "structure": { "formatif": [0, 0, 0], "sumatif": [0, 0], "deskripsi": null }
+    },
+    {
+      "nisn": "7002509012",
+      "nama": "INDRIANI",
+      "nilai": 40,
+      "calculated": {
+        "naFormatif": "0",
+        "naSumatif": "0",
+        "naSumatifFinal": 40,
+        "nilaiRaport": "13",
+        "ranking": 12
+      },
+      "structure": { "formatif": [0, 0, 0], "sumatif": [0, 0], "deskripsi": null }
+    },
+    {
+      "nisn": "7002509013",
+      "nama": "JAYA SAPUTRA",
+      "nilai": 0,
+      "calculated": {
+        "naFormatif": "0",
+        "naSumatif": "0",
+        "naSumatifFinal": 0,
+        "nilaiRaport": "0",
+        "ranking": 13
+      },
+      "structure": { "formatif": [0, 0, 0], "sumatif": [0, 0], "deskripsi": null }
+    },
+    {
+      "nisn": "7002509014",
+      "nama": "KAILA SAFIRA PUTRI",
+      "nilai": 100,
+      "calculated": {
+        "naFormatif": "0",
+        "naSumatif": "0",
+        "naSumatifFinal": 100,
+        "nilaiRaport": "33",
+        "ranking": 14
+      },
+      "structure": { "formatif": [0, 0, 0], "sumatif": [0, 0], "deskripsi": null }
+    },
+    {
+      "nisn": "7002509015",
+      "nama": "KEYLA RAMADHANI",
+      "nilai": 100,
+      "calculated": {
+        "naFormatif": "0",
+        "naSumatif": "0",
+        "naSumatifFinal": 100,
+        "nilaiRaport": "33",
+        "ranking": 15
+      },
+      "structure": { "formatif": [0, 0, 0], "sumatif": [0, 0], "deskripsi": null }
+    },
+    {
+      "nisn": "7002509016",
+      "nama": "Mahar Fauzi Rahman",
+      "nilai": 100,
+      "calculated": {
+        "naFormatif": "0",
+        "naSumatif": "0",
+        "naSumatifFinal": 100,
+        "nilaiRaport": "33",
+        "ranking": 16
+      },
+      "structure": { "formatif": [0, 0, 0], "sumatif": [0, 0], "deskripsi": null }
+    },
+    {
+      "nisn": "7002509017",
+      "nama": "Miska Rahayu",
+      "nilai": 80,
+      "calculated": {
+        "naFormatif": "0",
+        "naSumatif": "0",
+        "naSumatifFinal": 80,
+        "nilaiRaport": "27",
+        "ranking": 17
+      },
+      "structure": { "formatif": [0, 0, 0], "sumatif": [0, 0], "deskripsi": null }
+    },
+    {
+      "nisn": "7002509018",
+      "nama": "Naychila Intan Nuraini",
+      "nilai": 100,
+      "calculated": {
+        "naFormatif": "0",
+        "naSumatif": "0",
+        "naSumatifFinal": 100,
+        "nilaiRaport": "33",
+        "ranking": 18
+      },
+      "structure": { "formatif": [0, 0, 0], "sumatif": [0, 0], "deskripsi": null }
+    },
+    {
+      "nisn": "7002509019",
+      "nama": "NOVIANI SAFITRI",
+      "nilai": 80,
+      "calculated": {
+        "naFormatif": "0",
+        "naSumatif": "0",
+        "naSumatifFinal": 80,
+        "nilaiRaport": "27",
+        "ranking": 19
+      },
+      "structure": { "formatif": [0, 0, 0], "sumatif": [0, 0], "deskripsi": null }
+    },
+    {
+      "nisn": "7002509020",
+      "nama": "PITRI ANDINDA SARI",
+      "nilai": 60,
+      "calculated": {
+        "naFormatif": "0",
+        "naSumatif": "0",
+        "naSumatifFinal": 60,
+        "nilaiRaport": "20",
+        "ranking": 20
+      },
+      "structure": { "formatif": [0, 0, 0], "sumatif": [0, 0], "deskripsi": null }
+    },
+    {
+      "nisn": "7002509021",
+      "nama": "Restu Brahmana",
+      "nilai": 100,
+      "calculated": {
+        "naFormatif": "0",
+        "naSumatif": "0",
+        "naSumatifFinal": 100,
+        "nilaiRaport": "33",
+        "ranking": 21
+      },
+      "structure": { "formatif": [0, 0, 0], "sumatif": [0, 0], "deskripsi": null }
+    },
+    {
+      "nisn": "7002509022",
+      "nama": "Rifana Rosida",
+      "nilai": 100,
+      "calculated": {
+        "naFormatif": "0",
+        "naSumatif": "0",
+        "naSumatifFinal": 100,
+        "nilaiRaport": "33",
+        "ranking": 22
+      },
+      "structure": { "formatif": [0, 0, 0], "sumatif": [0, 0], "deskripsi": null }
+    },
+    {
+      "nisn": "7002509023",
+      "nama": "Risa Mayanisa",
+      "nilai": 100,
+      "calculated": {
+        "naFormatif": "0",
+        "naSumatif": "0",
+        "naSumatifFinal": 100,
+        "nilaiRaport": "33",
+        "ranking": 23
+      },
+      "structure": { "formatif": [0, 0, 0], "sumatif": [0, 0], "deskripsi": null }
+    },
+    {
+      "nisn": "7002509024",
+      "nama": "Rizka Salsabila",
+      "nilai": 100,
+      "calculated": {
+        "naFormatif": "0",
+        "naSumatif": "0",
+        "naSumatifFinal": 100,
+        "nilaiRaport": "33",
+        "ranking": 24
+      },
+      "structure": { "formatif": [0, 0, 0], "sumatif": [0, 0], "deskripsi": null }
+    },
+    {
+      "nisn": "7002509025",
+      "nama": "SAFANGA SEPTIANINGRUM",
+      "nilai": 100,
+      "calculated": {
+        "naFormatif": "0",
+        "naSumatif": "0",
+        "naSumatifFinal": 100,
+        "nilaiRaport": "33",
+        "ranking": 25
+      },
+      "structure": { "formatif": [0, 0, 0], "sumatif": [0, 0], "deskripsi": null }
+    },
+    {
+      "nisn": "7002509026",
+      "nama": "Selva Maulani Febriana",
+      "nilai": 100,
+      "calculated": {
+        "naFormatif": "0",
+        "naSumatif": "0",
+        "naSumatifFinal": 100,
+        "nilaiRaport": "33",
+        "ranking": 26
+      },
+      "structure": { "formatif": [0, 0, 0], "sumatif": [0, 0], "deskripsi": null }
+    },
+    {
+      "nisn": "7002509027",
+      "nama": "SELVINA JULIYAN",
+      "nilai": 0,
+      "calculated": {
+        "naFormatif": "0",
+        "naSumatif": "0",
+        "naSumatifFinal": 0,
+        "nilaiRaport": "0",
+        "ranking": 27
+      },
+      "structure": { "formatif": [0, 0, 0], "sumatif": [0, 0], "deskripsi": null }
+    },
+    {
+      "nisn": "7002509028",
+      "nama": "SYABRINA AYU",
+      "nilai": 100,
+      "calculated": {
+        "naFormatif": "0",
+        "naSumatif": "0",
+        "naSumatifFinal": 100,
+        "nilaiRaport": "33",
+        "ranking": 28
+      },
+      "structure": { "formatif": [0, 0, 0], "sumatif": [0, 0], "deskripsi": null }
+    },
+    {
+      "nisn": "7002509029",
+      "nama": "Syafa Amara Andini",
+      "nilai": 100,
+      "calculated": {
+        "naFormatif": "0",
+        "naSumatif": "0",
+        "naSumatifFinal": 100,
+        "nilaiRaport": "33",
+        "ranking": 29
+      },
+      "structure": { "formatif": [0, 0, 0], "sumatif": [0, 0], "deskripsi": null }
+    },
+    {
+      "nisn": "7002509030",
+      "nama": "TASYA AQILAH",
+      "nilai": 100,
+      "calculated": {
+        "naFormatif": "0",
+        "naSumatif": "0",
+        "naSumatifFinal": 100,
+        "nilaiRaport": "33",
+        "ranking": 30
+      },
+      "structure": { "formatif": [0, 0, 0], "sumatif": [0, 0], "deskripsi": null }
+    },
+    {
+      "nisn": "7002509031",
+      "nama": "Vika Widiya Oktavia",
+      "nilai": 100,
+      "calculated": {
+        "naFormatif": "0",
+        "naSumatif": "0",
+        "naSumatifFinal": 100,
+        "nilaiRaport": "33",
+        "ranking": 31
+      },
+      "structure": { "formatif": [0, 0, 0], "sumatif": [0, 0], "deskripsi": null }
+    },
+    {
+      "nisn": "7002509032",
+      "nama": "ZAHROTUL AFIYYAH",
+      "nilai": 80,
+      "calculated": {
+        "naFormatif": "0",
+        "naSumatif": "0",
+        "naSumatifFinal": 80,
+        "nilaiRaport": "27",
+        "ranking": 32
+      },
+      "structure": { "formatif": [0, 0, 0], "sumatif": [0, 0], "deskripsi": null }
+    }
+  ]
+}

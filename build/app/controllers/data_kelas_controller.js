@@ -123,9 +123,11 @@ export default class DataKelasController {
         const dataKelas = await DataKelas.query().select('siswa');
         const siswaTerdaftar = dataKelas.flatMap((k) => k.siswa);
         const siswaBelumTerdaftar = dataSiswa.filter((siswa) => !siswaTerdaftar.includes(siswa.nisn));
+        const semuaMapelOptions = await DataMapel.query().select(['id', 'namaMataPelajaran', 'jenjang']);
         return inertia.render('Kelas/Create', {
             guruWithMapel,
             dataSiswa: siswaBelumTerdaftar,
+            semuaMapel: semuaMapelOptions,
             session: session.flashMessages.all(),
         });
     }
@@ -137,6 +139,7 @@ export default class DataKelasController {
                 ...payload,
                 siswa: JSON.stringify(payload.siswa),
                 guruPengampu: JSON.stringify(payload.guruPengampu),
+                guruMapelMapping: payload.guruMapelMapping || this.generateDefaultMapping(payload.guruPengampu),
             };
             await DataKelas.create(newPayload, { client: trx });
             await trx.commit();
@@ -162,6 +165,16 @@ export default class DataKelasController {
         const dataGuru = await DataGuru.query()
             .select(['nip', 'userId'])
             .preload('user', (user) => user.select(['fullName']));
+        const kelasData = {
+            ...kelas.toJSON(),
+            siswa: typeof kelas.siswa === 'string' ? JSON.parse(kelas.siswa) : kelas.siswa,
+            guruPengampu: typeof kelas.guruPengampu === 'string'
+                ? JSON.parse(kelas.guruPengampu)
+                : kelas.guruPengampu,
+            guruMapelMapping: typeof kelas.guruMapelMapping === 'string'
+                ? JSON.parse(kelas.guruMapelMapping)
+                : kelas.guruMapelMapping || {},
+        };
         const nips = dataGuru.map((guru) => guru.nip);
         const semuaMapel = await DataMapel.query().select([
             'id',
@@ -204,11 +217,13 @@ export default class DataKelasController {
             .select(['nisn', 'userId'])
             .where('status', 'siswa')
             .preload('user', (user) => user.select(['fullName']));
+        const semuaMapelOptions = await DataMapel.query().select(['id', 'namaMataPelajaran', 'jenjang']);
         return inertia.render('Kelas/Edit', {
-            kelas,
+            kelas: kelasData,
             guruWithMapel,
             dataSiswa,
             session: session.flashMessages.all(),
+            semuaMapel: semuaMapelOptions,
         });
     }
     async update({ request, response, session, params }) {
@@ -222,6 +237,7 @@ export default class DataKelasController {
                 ...payload,
                 siswa: JSON.stringify(payload.siswa),
                 guruPengampu: JSON.stringify(payload.guruPengampu),
+                guruMapelMapping: payload.guruMapelMapping || kelas.guruMapelMapping,
             };
             kelas?.merge(newPayload);
             await kelas?.save();
@@ -273,6 +289,13 @@ export default class DataKelasController {
             });
         }
         return response.redirect().withQs().back();
+    }
+    generateDefaultMapping(guruPengampu) {
+        const mapping = {};
+        guruPengampu.forEach((nip) => {
+            mapping[nip] = [];
+        });
+        return mapping;
     }
 }
 //# sourceMappingURL=data_kelas_controller.js.map

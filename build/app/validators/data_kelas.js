@@ -5,5 +5,6 @@ export const kelasValidator = vine.compile(vine.object({
     waliKelas: vine.string(),
     siswa: vine.array(vine.string()).minLength(1),
     guruPengampu: vine.array(vine.string()).minLength(1),
+    guruMapelMapping: vine.record(vine.array(vine.string())).optional(),
 }));
 //# sourceMappingURL=data_kelas.js.map

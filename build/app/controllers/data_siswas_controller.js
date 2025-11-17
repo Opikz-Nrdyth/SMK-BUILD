@@ -474,6 +474,9 @@ export default class DataSiswasController {
             const fileFoto = request.file('fileFoto')
                 ? await this.uploadFile(request.file('fileFoto'), payload.nisn, 'foto')
                 : null;
+            const filePindah = request.file('suratKeteranganPindah')
+                ? await this.uploadFile(request.file('suratKeteranganPindah'), payload.nisn, 'skp')
+                : null;
             const user = await User.create({
                 fullName: payload.nama,
                 email: payload.email,
@@ -504,7 +507,7 @@ export default class DataSiswasController {
                 sekolahAsal: payload.sekolahAsal || 'Tidak diketahui',
                 npsn: payload.npsn,
                 sekolahAsalPindahan: payload.sekolahAsalPindahan,
-                suratKeteranganPindah: payload.suratKeteranganPindah,
+                suratKeteranganPindah: filePindah,
                 anakKe: payload.anakKe?.toString() || '1',
                 jumlahSaudara: payload.jumlahSaudara?.toString() || '0',
                 penerimaKip: payload.penerimaKip || 'Tidak',
@@ -982,6 +985,26 @@ export default class DataSiswasController {
             });
             return response.redirect().withQs().back();
         }
+    }
+    async resetPassword({ params, session, response }) {
+        const id = params.id;
+        if (id) {
+            const user = await User.query().where('email', id).preload('dataSiswa').first();
+            if (user && user.dataSiswa) {
+                user.password = user.dataSiswa.nisn;
+                await user.save();
+                session.flash({
+                    status: 'success',
+                    message: 'Password berhasil di reset menjadi NISN',
+                });
+                return response.redirect().back();
+            }
+        }
+        session.flash({
+            status: 'success',
+            message: 'Pengguna gagal di temukan',
+        });
+        return response.redirect().back();
     }
 }
 //# sourceMappingURL=data_siswas_controller.js.map

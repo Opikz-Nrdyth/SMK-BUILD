@@ -369,5 +369,25 @@ export default class DataGurusController {
             }
         }
     }
+    async resetPassword({ params, session, response }) {
+        const id = params.id;
+        if (id) {
+            const user = await User.query().where('email', id).preload('dataGuru').first();
+            if (user && user.dataGuru) {
+                user.password = user.dataGuru.nip;
+                await user.save();
+                session.flash({
+                    status: 'success',
+                    message: 'Password berhasil di reset menjadi NIY',
+                });
+                return response.redirect().back();
+            }
+        }
+        session.flash({
+            status: 'success',
+            message: 'Pengguna gagal di temukan',
+        });
+        return response.redirect().back();
+    }
 }
 //# sourceMappingURL=data_gurus_controller.js.map

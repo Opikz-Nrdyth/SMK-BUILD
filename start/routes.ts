@@ -29,6 +29,8 @@ import WhatsAppController from '#controllers/whats_apps_controller'
 import DataSiswaPraRegistsController from '#controllers/data_siswa_pra_regists_controller'
 import ManifestController from '#controllers/manifest_controller'
 import DataPasswordsController from '#controllers/data_passwords_controller'
+import PengelolaanNilaiController from '#controllers/pengelolaan_nilais_controller'
+import { AutomationPembayaranService } from '#services/pembayaran'
 
 router
   .group(() => {
@@ -51,6 +53,26 @@ router.get('/ppdb/success', [DataSiswasController, 'ppdbSuccess'])
 router.delete('/logout', [AuthenticationController, 'destroy'])
 router.post('/login', [AuthenticationController, 'store'])
 router.post('/register', [AuthenticationController, 'register'])
+
+router
+  .group(() => {
+    router.get('/pembayaran-spp', async () => {
+      return await new AutomationPembayaranService().generateSpp()
+    })
+
+    router.get('/pembayaran-up', async () => {
+      return await new AutomationPembayaranService().generateUP()
+    })
+
+    router.get('/pembayaran-du', async () => {
+      return await new AutomationPembayaranService().generateDU()
+    })
+  })
+  .use(middleware.checkCron())
+
+router.get('/penetapan', async () => {
+  return await new AutomationPembayaranService().Penetapan()
+})
 
 router
   .group(() => {
@@ -104,6 +126,7 @@ router.post('/switch/:role', async ({ params, session, response }) => {
   }
 })
 
+// ===============================================SUPER ADMIN===============================================
 router
   .group(() => {
     router.get('/', [DashboardSasController, 'SuperAdmin']).as('superadmin.index')
@@ -258,6 +281,10 @@ router
           })
         })
         .as('superadmin.pembayaran.cetak')
+
+      router
+        .get('/laporan-pembayaran/penetapan/get', [DataPembayaranController, 'getNominalPenetapan'])
+        .as('superadmin.pembayaran.penetapan')
     })
 
     router.get('/partisipasi-ujian', [DataPembayaranController, 'partisipasiUjian'])
@@ -354,6 +381,7 @@ router
   .prefix('SuperAdmin')
   .use([middleware.auth(), middleware.roleManajemen(['SuperAdmin']), middleware.webData()])
 
+// ===============================================GURU===============================================
 router
   .group(() => {
     router.get('/', [DashboardSasController, 'Guru']).as('guru.index')
@@ -408,6 +436,35 @@ router
         .as('guru.absensi.bulk')
     })
 
+    // Tambahkan di routes.ts dalam group guru
+    router.group(() => {
+      router
+        .get('/pengelolaan-nilai', [PengelolaanNilaiController, 'index'])
+        .as('guru.pengelolaan_nilai')
+
+      router
+        .get('/pengelolaan-nilai/data/:id', [PengelolaanNilaiController, 'getMapelByKelas'])
+        .as('guru.pengelolaan_nilai.mapel')
+
+      router
+        .get('/pengelolaan-nilai/dataUjian/:jenjang/:mapelId', [
+          PengelolaanNilaiController,
+          'getUjian',
+        ])
+        .as('guru.pengelolaan_nilai.ujian')
+
+      router
+        .get('/pengelolaan-nilai/dataNilai/:kelas/:mapel/:ujian', [
+          PengelolaanNilaiController,
+          'getNilai',
+        ])
+        .as('guru.pengelolaan_nilai.nilai')
+
+      router
+        .post('/pengelolaan-nilai/save/:kelas/:mapel/:ujian', [PengelolaanNilaiController, 'save'])
+        .as('guru.pengelolaan_nilai.save')
+    })
+
     router
       .resource('/manajemen-informasi', DataInformasiController)
       .only(['index', 'create', 'store', 'edit', 'update', 'destroy'])
@@ -450,6 +507,7 @@ router
   .prefix('guru')
   .use([middleware.auth(), middleware.roleManajemen(['Guru']), middleware.webData()])
 
+// ===============================================STAF===============================================
 router
   .group(() => {
     router.group(() => {
@@ -609,6 +667,13 @@ router
             })
           })
           .as('staf.pembayaran.cetak')
+
+        router
+          .get('/laporan-pembayaran/penetapan/get', [
+            DataPembayaranController,
+            'getNominalPenetapan',
+          ])
+          .as('staf.pembayaran.penetapan')
       })
     })
 
@@ -656,6 +721,7 @@ router
   .prefix('staf')
   .use([middleware.auth(), middleware.roleManajemen(['Staf']), middleware.webData()])
 
+// ===============================================SISWA===============================================
 router
   .group(() => {
     router.get('/jadwalujian', [UjiansController, 'jadwalUjian'])

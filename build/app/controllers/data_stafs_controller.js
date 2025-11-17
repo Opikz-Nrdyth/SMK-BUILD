@@ -317,5 +317,25 @@ export default class DataStafsController {
             }
         }
     }
+    async resetPassword({ params, session, response }) {
+        const id = params.id;
+        if (id) {
+            const user = await User.query().where('email', id).preload('dataStaf').first();
+            if (user && user.dataStaf) {
+                user.password = user.dataStaf.nip;
+                await user.save();
+                session.flash({
+                    status: 'success',
+                    message: 'Password berhasil di reset menjadi NIY',
+                });
+                return response.redirect().back();
+            }
+        }
+        session.flash({
+            status: 'success',
+            message: 'Pengguna gagal di temukan',
+        });
+        return response.redirect().back();
+    }
 }
 //# sourceMappingURL=data_stafs_controller.js.map

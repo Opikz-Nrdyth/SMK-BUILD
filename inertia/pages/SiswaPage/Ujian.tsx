@@ -10,6 +10,7 @@ import Quill from 'quill'
 import 'quill/dist/quill.snow.css'
 import katex from 'katex'
 import 'katex/dist/katex.min.css'
+import { timeFormat } from '~/Components/FormatWaktu'
 
 export type Soal = {
   id: string

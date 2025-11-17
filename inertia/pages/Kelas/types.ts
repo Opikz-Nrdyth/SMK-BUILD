@@ -4,4 +4,5 @@ export interface Kelas {
   waliKelas: string
   siswa: string[]
   guruPengampu: string[]
+  guruMapelMapping?: Record<string, string[]>
 }

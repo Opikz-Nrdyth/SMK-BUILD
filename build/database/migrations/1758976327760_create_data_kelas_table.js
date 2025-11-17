@@ -8,6 +8,7 @@ export default class extends BaseSchema {
             table.string('nama_kelas');
             table.json('siswa');
             table.json('guru_pengampu');
+            table.json('guru_mapel_mapping');
             table.string('wali_kelas').references('nip').inTable('data_gurus');
             table.timestamp('created_at');
             table.timestamp('updated_at');

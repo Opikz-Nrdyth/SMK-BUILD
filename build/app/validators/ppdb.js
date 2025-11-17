@@ -51,7 +51,6 @@ export const ppdbValidator = vine.compile(vine.object({
     status: vine.enum(['praregist', 'daftarulang', 'siswa']).optional(),
     npsn: vine.string().maxLength(20).optional(),
     sekolahAsalPindahan: vine.string().maxLength(200).optional(),
-    suratKeteranganPindah: vine.string().maxLength(255).optional(),
     hobby: vine.string().maxLength(100).optional(),
     citacita: vine.string().maxLength(100).optional(),
     namaAyah: vine.string().minLength(2).maxLength(100),
@@ -79,5 +78,6 @@ export const ppdbValidator = vine.compile(vine.object({
     ijazah: fileSchema.optional(),
     foto: fileSchema.optional(),
     akta: fileSchema.optional(),
+    suratKeteranganPindah: fileSchema.optional().optional(),
 }));
 //# sourceMappingURL=ppdb.js.map

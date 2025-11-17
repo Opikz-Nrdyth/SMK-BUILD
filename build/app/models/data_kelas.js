@@ -37,6 +37,49 @@ export default class DataKelas extends BaseModel {
     setSiswaArray(nisn) {
         this.siswa = JSON.stringify(nisn);
     }
+    getGuruMapelMapping() {
+        return this.guruMapelMapping || {};
+    }
+    setGuruMapelMapping(mapping) {
+        this.guruMapelMapping = mapping;
+    }
+    addGuruMapel(nip, mapelId) {
+        const mapping = this.getGuruMapelMapping();
+        if (!mapping[nip]) {
+            mapping[nip] = [];
+        }
+        if (!mapping[nip].includes(mapelId)) {
+            mapping[nip].push(mapelId);
+        }
+        this.setGuruMapelMapping(mapping);
+    }
+    removeGuruMapel(nip, mapelId) {
+        const mapping = this.getGuruMapelMapping();
+        if (mapelId && mapping[nip]) {
+            mapping[nip] = mapping[nip].filter((id) => id !== mapelId);
+            if (mapping[nip].length === 0) {
+                delete mapping[nip];
+            }
+        }
+        else {
+            delete mapping[nip];
+        }
+        this.setGuruMapelMapping(mapping);
+    }
+    getMapelByGuru(nip) {
+        const mapping = this.getGuruMapelMapping();
+        return mapping[nip] || [];
+    }
+    getGuruByMapel(mapelId) {
+        const mapping = this.getGuruMapelMapping();
+        const result = [];
+        Object.entries(mapping).forEach(([nip, mapelIds]) => {
+            if (mapelIds.includes(mapelId)) {
+                result.push(nip);
+            }
+        });
+        return result;
+    }
 }
 __decorate([
     column({ isPrimary: true }),
@@ -62,6 +105,17 @@ __decorate([
     column(),
     __metadata("design:type", String)
 ], DataKelas.prototype, "siswa", void 0);
+__decorate([
+    column({
+        prepare: (value) => JSON.stringify(value),
+        consume: (value) => {
+            if (!value)
+                return {};
+            return typeof value === 'string' ? JSON.parse(value) : value;
+        },
+    }),
+    __metadata("design:type", Object)
+], DataKelas.prototype, "guruMapelMapping", void 0);
 __decorate([
     column.dateTime({ autoCreate: true }),
     __metadata("design:type", DateTime)

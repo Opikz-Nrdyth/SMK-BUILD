@@ -120,14 +120,7 @@ export default function Index({
     }, 500)
   }
 
-  const jenisPembayaranOptions = [
-    'SPP',
-    'Uang Bangunan',
-    'Uang Seragam',
-    'Uang Kegiatan',
-    'Uang Buku',
-    'Lainnya',
-  ]
+  const jenisPembayaranOptions = ['SPP', 'Uang Daftar Ulang', 'Uang Pangkal']
 
   // Format data untuk modal view
   const getModalData = (item: any) => {
