@@ -248,23 +248,45 @@ export default function DataTable<T extends Record<string, unknown>>({
                   {columns.map((col, indx) => {
                     if (!col.action) {
                       return (
-                        <td
-                          key={indx}
-                          className={[
-                            'whitespace-nowrap px-4 py-3',
-                            col.hideMobile ? 'hidden sm:table-cell' : '',
-                            col.className || '',
-                          ].join(' ')}
-                        >
-                          {col.isTime
-                            ? timeFormat(String(row[col.accessor]), {
+                        <>
+                          {col.isTime ? (
+                            <td
+                              key={indx}
+                              className={[
+                                'whitespace-nowrap px-4 py-3',
+                                col.hideMobile ? 'hidden sm:table-cell' : '',
+                                col.className || '',
+                              ].join(' ')}
+                            >
+                              {timeFormat(String(row[col.accessor]), {
                                 mode: col.isTime.mode,
                                 withDay: col.isTime.withDay,
-                              })
-                            : col.badge
-                              ? badgeComponents(String(row[col.accessor]), col.badge)
-                              : String(row[col.accessor])}
-                        </td>
+                              })}
+                            </td>
+                          ) : col.badge ? (
+                            <td
+                              key={indx}
+                              className={[
+                                'whitespace-nowrap px-4 py-3',
+                                col.hideMobile ? 'hidden sm:table-cell' : '',
+                                col.className || '',
+                              ].join(' ')}
+                            >
+                              {badgeComponents(String(row[col.accessor]), col.badge)}
+                            </td>
+                          ) : (
+                            <td
+                              key={indx}
+                              className={[
+                                'whitespace-nowrap px-4 py-3',
+                                col.hideMobile ? 'hidden sm:table-cell' : '',
+                                col.className || '',
+                              ].join(' ')}
+                            >
+                              {row[col.accessor]}
+                            </td>
+                          )}
+                        </>
                       )
                     }
                   })}
@@ -282,7 +304,7 @@ export default function DataTable<T extends Record<string, unknown>>({
                           canView(row)
                             ? 'text-green-600 cursor-pointer'
                             : 'text-gray-400 cursor-not-allowed'
-                        }`}
+                        } ${!canView(row) ? 'hidden' : ''}`}
                         title={!canView(row) ? disableConfig?.disabledMessage : 'View details'}
                       >
                         view
@@ -294,7 +316,7 @@ export default function DataTable<T extends Record<string, unknown>>({
                           canEdit(row)
                             ? 'text-yellow-600 cursor-pointer'
                             : 'text-gray-400 cursor-not-allowed pointer-events-none'
-                        }`}
+                        } ${!canEdit(row) ? 'hidden' : ''}`}
                         title={!canEdit(row) ? disableConfig?.disabledMessage : 'Edit data'}
                       >
                         edit
@@ -307,7 +329,7 @@ export default function DataTable<T extends Record<string, unknown>>({
                           canDelete(row)
                             ? 'text-red-600 cursor-pointer'
                             : 'text-gray-400 cursor-not-allowed'
-                        }`}
+                        } ${!canDelete(row) ? 'hidden' : ''}`}
                         title={!canDelete(row) ? disableConfig?.disabledMessage : 'Delete data'}
                       >
                         delete

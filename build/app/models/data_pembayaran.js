@@ -21,7 +21,7 @@ export default class DataPembayaran extends BaseModel {
             if (!this.nominalBayar) {
                 return [];
             }
-            const parsed = this.nominalBayar;
+            const parsed = typeof this.nominalBayar == 'string' ? JSON.parse(this.nominalBayar) : this.nominalBayar;
             return Array.isArray(parsed) ? parsed : [];
         }
         catch (error) {
@@ -41,9 +41,9 @@ export default class DataPembayaran extends BaseModel {
         const penetapan = parseFloat(this.nominalPenetapan || '0');
         return penetapan - totalDibayar;
     }
-    addPembayaran(nominal, tanggal) {
+    addPembayaran(nominal, tanggal, metode) {
         const currentData = this.getNominalBayarArray();
-        currentData.push({ nominal, tanggal });
+        currentData.push({ nominal, tanggal, metode });
         this.nominalBayar = JSON.stringify(currentData);
     }
 }

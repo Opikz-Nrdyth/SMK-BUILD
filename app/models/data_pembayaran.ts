@@ -54,13 +54,14 @@ export default class DataPembayaran extends BaseModel {
   }
 
   // Method untuk mendapatkan array nominal bayar dari JSON dengan error handling
-  public getNominalBayarArray(): Array<{ nominal: string; tanggal: string }> {
+  public getNominalBayarArray(): Array<{ nominal: string; tanggal: string; metode: string }> {
     try {
       if (!this.nominalBayar) {
         return []
       }
 
-      const parsed = this.nominalBayar
+      const parsed =
+        typeof this.nominalBayar == 'string' ? JSON.parse(this.nominalBayar) : this.nominalBayar
       return Array.isArray(parsed) ? parsed : []
     } catch (error) {
       console.error('Error parsing nominalBayar JSON:', error)
@@ -85,9 +86,9 @@ export default class DataPembayaran extends BaseModel {
   }
 
   // Method untuk menambah pembayaran
-  public addPembayaran(nominal: string, tanggal: string): void {
+  public addPembayaran(nominal: string, tanggal: string, metode: string): void {
     const currentData = this.getNominalBayarArray()
-    currentData.push({ nominal, tanggal })
+    currentData.push({ nominal, tanggal, metode })
     this.nominalBayar = JSON.stringify(currentData)
   }
 }

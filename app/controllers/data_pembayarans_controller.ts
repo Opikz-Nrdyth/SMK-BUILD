@@ -81,9 +81,11 @@ export default class DataPembayaranController {
 
     // Filter berdasarkan search (nama user)
     if (search) {
-      query.whereHas('user', (userQuery) => {
-        userQuery.where('fullName', 'LIKE', `%${search}%`)
-      })
+      query
+        .whereHas('user', (userQuery) => {
+          userQuery.where('fullName', 'LIKE', `%${search}%`)
+        })
+        .orWhere('id', 'LIKE', `%${search}%`)
     }
 
     // Filter berdasarkan jenis pembayaran
@@ -182,6 +184,14 @@ export default class DataPembayaranController {
     try {
       await auth.check()
       const user = auth.user!
+      const dataWebsite = (await DataWebsite.getAllSettings()) as any
+
+      if (!dataWebsite.midtrans_server_key && !dataWebsite.midtrans_client_key) {
+        session.flash({
+          status: 'error',
+          message: 'Pembayaran online belum siap digunakan',
+        })
+      }
 
       // Pastikan user adalah Siswa
       await user.load('dataSiswa')
@@ -250,6 +260,9 @@ export default class DataPembayaranController {
         },
         session: session.flashMessages.all(),
         user: user.toJSON(),
+        midtransClientKey: dataWebsite.midtrans_client_key,
+        midtransIsProduction: dataWebsite.midtrans_isProduction,
+        minimum_cicilan: dataWebsite.min_cicilan ?? 1,
       })
     } catch (error) {
       logger.error({ err: error }, 'Gagal memuat data tagihan siswa')
@@ -259,9 +272,6 @@ export default class DataPembayaranController {
     }
   }
 
-  /**
-   * Helper function untuk parse JSON dengan error handling
-   */
   private safeJsonParse(jsonString: string | null | undefined): any[] {
     if (!jsonString) {
       return []
@@ -276,9 +286,6 @@ export default class DataPembayaranController {
     }
   }
 
-  /**
-   * Helper function untuk menghitung total dibayar
-   */
   private calculateTotalDibayar(nominalBayarArray: any[]): number {
     return nominalBayarArray.reduce((total: number, bayar: any) => {
       const nominal = parseFloat(bayar.nominal || '0')
@@ -550,6 +557,7 @@ export default class DataPembayaranController {
       currentBayar.push({
         nominal: payload.nominal,
         tanggal: payload.tanggal,
+        metode: 'Offline',
       })
 
       pembayaran.nominalBayar = JSON.stringify(currentBayar)
@@ -891,6 +899,90 @@ export default class DataPembayaranController {
       nominal: Number(nominal),
       jenjang,
       sumber: 'DataWebsite',
+    }
+  }
+
+  public async initiateMidtrans({ request, response, auth, session }: HttpContext) {
+    try {
+      await auth.check()
+      const userId = auth.user!
+      const user = await User.query().where('id', userId.id).preload('dataSiswa').first()
+      const dataWebsite = (await DataWebsite.getAllSettings()) as any
+
+      if (!dataWebsite.midtrans_server_key && !dataWebsite.midtrans_client_key) {
+        session.flash({
+          status: 'error',
+          message: 'Pembayaran online belum siap digunakan',
+        })
+        return response.redirect().back()
+      }
+
+      const { pembayaranId, amount, type } = request.only(['pembayaranId', 'amount', 'type'])
+
+      // Generate order ID
+      const idPembayaran = pembayaranId.split('-')
+      const orderId = `TRX-${Date.now()}-${idPembayaran[0]}`
+
+      // Data untuk Midtrans
+      const midtransPayload = {
+        transaction_details: {
+          order_id: orderId,
+          gross_amount: parseInt(amount),
+        },
+        item_details: [
+          {
+            id: pembayaranId,
+            price: parseInt(amount),
+            quantity: 1,
+            name: type,
+            category: 'Layanan',
+            merchant_name: 'Opikz Studio',
+          },
+        ],
+        customer_details: {
+          first_name: user?.fullName,
+          email: user?.email,
+          phone: user?.dataSiswa.noTelepon,
+        },
+        custom_field1: user?.id,
+        custom_field2: pembayaranId,
+      }
+
+      // Panggil Midtrans API
+      const BASEURL = dataWebsite.midtrans_isProduction
+        ? 'https://app.midtrans.com/snap/v1/transactions'
+        : 'https://app.sandbox.midtrans.com/snap/v1/transactions'
+
+      const midtransResponse = await fetch(BASEURL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization':
+            'Basic ' + Buffer.from(dataWebsite.midtrans_server_key + ':').toString('base64'),
+        },
+        body: JSON.stringify(midtransPayload),
+      })
+
+      const result = await midtransResponse.json()
+
+      if (!midtransResponse.ok) {
+        throw new Error(result.message || 'Midtrans error')
+      }
+
+      return response.json({
+        success: true,
+        data: {
+          token: result.token,
+          redirect_url: result.redirect_url,
+          order_id: midtransPayload.transaction_details.order_id,
+        },
+      })
+    } catch (error) {
+      logger.error({ err: error }, 'Gagal initiate Midtrans')
+      return response.status(500).json({
+        success: false,
+        message: 'Gagal memproses pembayaran',
+      })
     }
   }
 }

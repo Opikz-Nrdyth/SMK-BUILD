@@ -1,7 +1,10 @@
 // resources/js/Pages/Siswa/Tagihan/Index.tsx
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import SiswaLayout from '~/Layouts/SiswaLayouts'
 import { Notification } from '~/Components/Notification'
+import UniversalInput from '~/Components/UniversalInput'
+import { useNotification } from '~/Components/NotificationAlert'
+import { router } from '@inertiajs/react'
 
 interface TagihanItem {
   id: string
@@ -20,6 +23,9 @@ export default function Index({
   tagihan,
   statistik,
   user,
+  minimum_cicilan,
+  midtransClientKey,
+  midtransIsProduction,
 }: {
   tagihan: TagihanItem[]
   statistik: {
@@ -29,8 +35,20 @@ export default function Index({
     totalHutang: number
   }
   user: any
+  minimum_cicilan: any
+  midtransClientKey: string
+  midtransIsProduction: any
 }) {
   const [filter, setFilter] = useState<'semua' | 'lunas' | 'belum-lunas'>('belum-lunas')
+  const [cekCicil, setCekCicil] = useState(false)
+  const [defaultPayment, setDefaultPayment] = useState({
+    id: '',
+    type: '',
+    amount: 0,
+    cicil: 0,
+  })
+
+  const { notify } = useNotification()
 
   // Format currency
   const formatRupiah = (amount: number) => {
@@ -78,6 +96,63 @@ export default function Index({
         </div>
       </div>
     )
+  }
+
+  useEffect(() => {
+    const script = document.createElement('script')
+    script.src = midtransIsProduction
+      ? 'https://app.midtrans.com/snap/snap.js'
+      : 'https://app.sandbox.midtrans.com/snap/snap.js'
+    script.setAttribute('data-client-key', midtransClientKey)
+    script.async = true
+    document.body.appendChild(script)
+
+    return () => {
+      document.body.removeChild(script)
+    }
+  }, [midtransClientKey])
+
+  const handleBayar = async (pembayaranId: string, amount: number, tipePembayaran: string) => {
+    try {
+      const response = await fetch('/siswa/pembayaran/midtrans/initiate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN':
+            (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+        },
+        body: JSON.stringify({
+          pembayaranId: pembayaranId,
+          amount: amount,
+          type: tipePembayaran,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        // Buka popup Midtrans
+        snap.pay(result.data.token, {
+          onSuccess: function () {
+            router.post(`/midtrans/notification/${result.data.order_id}`)
+            notify('Pembayaran berhasil!', 'success')
+          },
+          onPending: function () {
+            router.post(`/midtrans/notification/${result.data.order_id}`)
+            notify('Pembayaran pending', 'warning')
+          },
+          onError: function () {
+            router.post(`/midtrans/notification/${result.data.order_id}`)
+            notify('Pembayaran gagal! harap hubungi admin', 'error')
+          },
+        })
+      } else {
+        notify('Gagal memproses pembayaran! harap hubungi admin', 'error')
+      }
+    } catch (error) {
+      console.error('Payment error:', error)
+      notify('Terjadi kesalahan! harap hubungi admin', 'error')
+    }
   }
 
   return (
@@ -148,7 +223,7 @@ export default function Index({
         </div>
 
         {/* Daftar Tagihan */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-14">
           {filteredTagihan.map((item) => (
             <div
               key={item.id}
@@ -270,6 +345,28 @@ export default function Index({
               <div className="mt-4 pt-4 border-t border-gray-200">
                 <div className="text-xs text-gray-500">Dibuat: {formatTanggal(item.createdAt)}</div>
               </div>
+              <div
+                className="flex justify-end"
+                onClick={() => {
+                  if (item.jenisPembayaran != 'SPP') {
+                    setCekCicil(true)
+                    setDefaultPayment({
+                      id: item.id,
+                      amount: item.sisaPembayaran,
+                      type: item.jenisPembayaran,
+                      cicil: minimum_cicilan,
+                    })
+                  } else {
+                    handleBayar(item.id, item.nominalPenetapan, item.jenisPembayaran)
+                  }
+                }}
+              >
+                {!item.lunas && (
+                  <button className="bg-green-200 hover:bg-green-400 dark:bg-green-800 dark:hover:bg-green-700  px-2 py-1 rounded-md mt-5">
+                    Bayar Sekarang
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -303,6 +400,82 @@ export default function Index({
           </div>
         )}
       </div>
+
+      {cekCicil && (
+        <div className="fixed z-50 w-full h-[100vh] bg-black/40 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-2xl w-full max-w-md p-6">
+            <h2 className="text-2xl font-bold mb-4 text-gray-800">Pilih Metode Pembayaran</h2>
+            <p className="text-xl font-semibold text-indigo-600 mb-6">
+              Total Tagihan: {formatRupiah(defaultPayment.amount)}
+            </p>
+
+            <button
+              onClick={() => {
+                handleBayar(defaultPayment.id, defaultPayment.amount, defaultPayment.type)
+              }}
+              className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition duration-200 shadow-md mb-4"
+            >
+              Bayar Penuh ({formatRupiah(defaultPayment.amount)})
+            </button>
+
+            <hr className="my-6 border-gray-200" />
+
+            <div className="mb-6">
+              <div className="mt-4 p-4 border border-indigo-200 rounded-lg bg-indigo-50">
+                <label
+                  htmlFor="inputCicilan"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Masukkan Jumlah Pembayaran MIN: {formatRupiah(minimum_cicilan)}
+                </label>
+                <UniversalInput
+                  type="currency"
+                  name="inputCicilan"
+                  value={String(defaultPayment.cicil)}
+                  onChange={(value) => {
+                    setDefaultPayment((prev) => ({
+                      ...prev,
+                      cicil: value,
+                    }))
+                  }}
+                  placeholder={`Min: ${formatRupiah(minimum_cicilan)}`}
+                  className="w-full px-3 py-2 border border-indigo-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-lg"
+                />
+                <p className="mt-2 text-sm text-gray-500">
+                  Sisa tagihan akan tetap dicatat di sistem.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                if (defaultPayment.cicil >= minimum_cicilan) {
+                  setCekCicil(false)
+                  handleBayar(defaultPayment.id, defaultPayment.cicil, defaultPayment.type)
+                } else {
+                  notify(
+                    `Minimum pembayaran adalah ${formatRupiah(minimum_cicilan)}`,
+                    'warning',
+                    5000
+                  )
+                }
+              }}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition duration-200 disabled:bg-indigo-300 shadow-md"
+            >
+              Bayar Cicilan
+            </button>
+
+            <button
+              onClick={() => {
+                setCekCicil(false)
+              }}
+              className="mt-4 w-full text-sm text-gray-500 hover:text-gray-700"
+            >
+              Batal
+            </button>
+          </div>
+        </div>
+      )}
     </SiswaLayout>
   )
 }

@@ -72,6 +72,10 @@ interface WebsiteSettings {
   penetapan_ud_11: string
   penetapan_ud_12: string
   biaya_admin: string
+  min_cicilan: string
+  midtrans_server_key: string
+  midtrans_client_key: string
+  midtrans_isProduction: string
 }
 
 export default function LandingPageManagement() {
@@ -147,6 +151,10 @@ export default function LandingPageManagement() {
     penetapan_ud_11: '0',
     penetapan_ud_12: '0',
     biaya_admin: '0',
+    min_cicilan: '0',
+    midtrans_server_key: '',
+    midtrans_client_key: '',
+    midtrans_isProduction: '0',
   })
 
   useEffect(() => {
@@ -945,6 +953,43 @@ export default function LandingPageManagement() {
               value={data?.biaya_admin}
               onChange={(value) => setData('biaya_admin', value)}
               placeholder="4.000"
+            />
+
+            <UniversalInput
+              type="currency"
+              name="min_cicilan"
+              label="Penetapan Minimal Cicilan"
+              value={data?.min_cicilan}
+              onChange={(value) => setData('min_cicilan', value)}
+              placeholder="200.000"
+            />
+
+            <UniversalInput
+              type="password"
+              name="mid_server"
+              label="Server Key Midtrans"
+              value={data?.midtrans_server_key}
+              onChange={(value) => setData('midtrans_server_key', value)}
+              placeholder="Mid-server-xxx / SB-Mid-server-xxx"
+            />
+
+            <UniversalInput
+              type="password"
+              name="mid_client"
+              label="Client Key Midtrans"
+              value={data?.midtrans_client_key}
+              onChange={(value) => setData('midtrans_client_key', value)}
+              placeholder="Mid-client-xxx / SB-Mid-client-xxx"
+            />
+
+            <UniversalInput
+              type="switch"
+              name="mid_isProduction"
+              label="Production Mode"
+              value={data?.midtrans_isProduction}
+              onChange={(value) => {
+                setData('midtrans_isProduction', value)
+              }}
             />
           </div>
         )

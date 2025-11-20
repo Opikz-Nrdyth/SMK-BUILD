@@ -9,16 +9,6 @@ export default defineConfig({
         react(),
         adonisjs({ entrypoints: ['inertia/app/app.tsx'], reload: ['resources/views/**/*.edge'] }),
     ],
-    server: {
-        allowedHosts: ['smksbinaindustri.opikstudio.my.id'],
-        host: '0.0.0.0',
-        port: 2052,
-        cors: true,
-        hmr: {
-            host: 'smksbinaindustri.opikstudio.my.id',
-            protocol: 'wss',
-        },
-    },
     resolve: {
         alias: {
             '~/': `${getDirname(import.meta.url)}/inertia/`,

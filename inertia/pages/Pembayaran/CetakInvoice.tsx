@@ -20,7 +20,15 @@ interface InvoiceData {
   nomorInvoice: string
 }
 
-export default function CetakInvoice({ auth, pembayaranId }: { auth: any; pembayaranId: string }) {
+export default function CetakInvoice({
+  auth,
+  pembayaranId,
+  dataWebsite,
+}: {
+  auth: any
+  pembayaranId: string
+  dataWebsite: any
+}) {
   const { props } = usePage()
   const pattern = props?.pattern.split('/').filter((item: any) => item != '')
   const url = `/${pattern[0]}/${pattern[1]}`
@@ -30,6 +38,35 @@ export default function CetakInvoice({ auth, pembayaranId }: { auth: any; pembay
   const [customWidth, setCustomWidth] = useState('21')
   const [customHeight, setCustomHeight] = useState('29.7')
   const invoiceRef = useRef<HTMLDivElement>(null)
+
+  console.log(dataWebsite)
+
+  useEffect(() => {
+    const handleBeforePrint = () => {
+      const original = document.getElementById('invoice-content')
+      if (!original) return
+
+      const clone = original.cloneNode(true)
+      clone.id = 'invoice-duplicate'
+      clone.style.position = 'absolute'
+      clone.style.left = '14.85cm'
+      clone.style.top = '0'
+      document.body.appendChild(clone)
+    }
+
+    const handleAfterPrint = () => {
+      const clone = document.getElementById('invoice-duplicate')
+      if (clone) clone.remove()
+    }
+
+    window.addEventListener('beforeprint', handleBeforePrint)
+    window.addEventListener('afterprint', handleAfterPrint)
+
+    return () => {
+      window.removeEventListener('beforeprint', handleBeforePrint)
+      window.removeEventListener('afterprint', handleAfterPrint)
+    }
+  }, [])
 
   useEffect(() => {
     loadInvoiceData()
@@ -129,6 +166,7 @@ export default function CetakInvoice({ auth, pembayaranId }: { auth: any; pembay
       {/* Invoice Preview */}
       <div className="flex justify-center">
         <div
+          id="invoice-content"
           ref={invoiceRef}
           className={`bg-white shadow-lg ${paperSizes[paperSize as keyof typeof paperSizes]?.class} mx-auto`}
           style={
@@ -143,9 +181,11 @@ export default function CetakInvoice({ auth, pembayaranId }: { auth: any; pembay
         >
           {/* Header */}
           <div className="border-b-2 border-gray-800 pb-4 mb-6 text-center">
-            <h1 className="text-xl font-bold uppercase mb-2">Sekolah Menengah Atas Negeri 1</h1>
-            <p className="text-sm text-gray-600">Jl. Pendidikan No. 123, Jakarta Selatan</p>
-            <p className="text-sm text-gray-600">Telp: (021) 1234567 | Email: info@sman1.sch.id</p>
+            <h1 className="text-xl font-bold uppercase mb-2">{dataWebsite.school_name}</h1>
+            <p className="text-sm text-gray-600">{dataWebsite.school_address}</p>
+            <p className="text-sm text-gray-600">
+              Telp: {dataWebsite.school_phone} | Email: {dataWebsite.school_email}
+            </p>
           </div>
 
           {/* Invoice Title */}
@@ -262,8 +302,8 @@ export default function CetakInvoice({ auth, pembayaranId }: { auth: any; pembay
           </div>
 
           {/* Footer */}
-          <div className="mt-8 pt-6 border-t border-gray-300">
-            <div className="text-center text-sm text-gray-600 mb-4">
+          <div className="mt-8 pt-6 border-t border-gray-300 flex justify-between">
+            <div className="text-center text-sm text-gray-600 mb-4 w-[50%]">
               <p>Terima kasih atas pembayaran Anda.</p>
               <p>Invoice ini sah dan dapat digunakan sebagai bukti pembayaran.</p>
             </div>
@@ -276,12 +316,14 @@ export default function CetakInvoice({ auth, pembayaranId }: { auth: any; pembay
               </div>
             </div>
           </div>
+          <div className="middle-divider"></div>
         </div>
       </div>
 
       {/* Print Styles */}
       <style>{`
         @media print {
+          @page {size: landscape}
           body * {
             visibility: hidden;
           }
@@ -301,6 +343,50 @@ export default function CetakInvoice({ auth, pembayaranId }: { auth: any; pembay
           .no-print {
             display: none !important;
           }
+
+          #invoice-duplicate {
+            position: absolute !important;
+            top: 0 !important;
+            left: 18.85cm !important;
+            width: 14.85cm !important;
+            height: 21cm !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: hidden;
+          }
+
+          .middle-divider{
+            position: absolute !important;
+            top: 0 !important;
+            left: 16.85cm !important;
+            width: 1px !important;
+            height: 26cm !important;
+            border: 1px dashed black !important;
+            background: black !important;
+            z-index: 99999 !important;
+          }
+
+          /* halaman kiri, setengah A4 */
+          #invoice-content {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 14.85cm !important;
+            height: 21cm !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+
+          /* garis pembatas tengah */
+          .a4-paper::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 14.85cm;
+            width: 1px;
+            height: 21cm;
+            background: #000;
+          }
         }
         
         .a4-paper {
@@ -309,32 +395,7 @@ export default function CetakInvoice({ auth, pembayaranId }: { auth: any; pembay
           padding: 2cm;
           margin: 0 auto;
           background: white;
-          box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-        
-        .a5-paper {
-          width: 14.8cm;
-          min-height: 21cm;
-          padding: 1.5cm;
-          margin: 0 auto;
-          background: white;
-          box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-        
-        .a6-paper {
-          width: 10.5cm;
-          min-height: 14.8cm;
-          padding: 1cm;
-          margin: 0 auto;
-          background: white;
-          box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-        
-        .custom-paper {
-          margin: 0 auto;
-          background: white;
-          box-shadow: 0 0 10px rgba(0,0,0,0.1);
-          padding: 1.5cm;
+          
         }
       `}</style>
     </div>

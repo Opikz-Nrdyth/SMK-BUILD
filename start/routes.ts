@@ -31,6 +31,8 @@ import ManifestController from '#controllers/manifest_controller'
 import DataPasswordsController from '#controllers/data_passwords_controller'
 import PengelolaanNilaiController from '#controllers/pengelolaan_nilais_controller'
 import { AutomationPembayaranService } from '#services/pembayaran'
+import DataRecordPembayaransController from '#controllers/data_record_pembayarans_controller'
+import DataWebsite from '#models/data_website'
 
 router
   .group(() => {
@@ -275,9 +277,11 @@ router
         .as('superadmin.pembayaran.cetak_invoice')
 
       router
-        .get('/laporan-pembayaran/:id/cetak', ({ inertia, params }) => {
+        .get('/laporan-pembayaran/:id/cetak', async ({ inertia, params }) => {
+          const dataWebsite = await DataWebsite.getAllSettings()
           return inertia.render('Pembayaran/CetakInvoice', {
             pembayaranId: params.id,
+            dataWebsite,
           })
         })
         .as('superadmin.pembayaran.cetak')
@@ -285,6 +289,10 @@ router
       router
         .get('/laporan-pembayaran/penetapan/get', [DataPembayaranController, 'getNominalPenetapan'])
         .as('superadmin.pembayaran.penetapan')
+
+      router
+        .get('/laporan-pembayaran/recordMidtrans', [DataRecordPembayaransController, 'index'])
+        .as('superadmin.pembayaran.record')
     })
 
     router.get('/partisipasi-ujian', [DataPembayaranController, 'partisipasiUjian'])
@@ -653,6 +661,10 @@ router
           .as('staf.pembayaran.tambah')
 
         router
+          .get('/laporan-pembayaran/recordMidtrans', [DataRecordPembayaransController, 'index'])
+          .as('staf.pembayaran.record')
+
+        router
           .get('/laporan-pembayaran/check-existing', [DataPembayaranController, 'checkExisting'])
           .as('staf.pembayaran.check')
 
@@ -661,9 +673,11 @@ router
           .as('staf.pembayaran.cetak_invoice')
 
         router
-          .get('/laporan-pembayaran/:id/cetak', ({ inertia, params }) => {
+          .get('/laporan-pembayaran/:id/cetak', async ({ inertia, params }) => {
+            const dataWebsite = await DataWebsite.getAllSettings()
             return inertia.render('Pembayaran/CetakInvoice', {
               pembayaranId: params.id,
+              dataWebsite,
             })
           })
           .as('staf.pembayaran.cetak')
@@ -738,6 +752,28 @@ router
     router.get('/account/edit', [UserAccountController, 'edit']).as('siswa.account.edit')
     router.put('/account/update', [UserAccountController, 'update']).as('siswa.account.update')
     router.get('/:month?', [DashboardSasController, 'Siswa'])
+    router.post('/pembayaran/midtrans/initiate', [DataPembayaranController, 'initiateMidtrans'])
   })
   .prefix('siswa')
   .use([middleware.auth(), middleware.roleManajemen(['Siswa']), middleware.webData()])
+
+router
+  .group(() => {
+    router
+      .post('/midtrans/notification/:orderId', [
+        DataRecordPembayaransController,
+        'handleNotification',
+      ])
+      .as('midtrans.notification')
+
+    router.get('/api/midtrans/status-proxy/:orderId', [
+      DataRecordPembayaransController,
+      'getMidtransStatusProxy',
+    ])
+
+    router.get('/api/midtrans/:orderId/cancel', [
+      DataRecordPembayaransController,
+      'handleCancelOrder',
+    ])
+  })
+  .use([middleware.auth()])
