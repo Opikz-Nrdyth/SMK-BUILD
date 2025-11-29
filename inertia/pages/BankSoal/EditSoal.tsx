@@ -22,7 +22,7 @@ export default function EditSoal({ bankSoal, soalContent }: EditSoalProps) {
       syncStatus: 'synced' as const,
     })) || []
   )
-  const { props } = usePage()
+  const { props } = usePage() as any
   const pattern = props?.pattern.split('/').filter((item: any) => item != '')
   const url = `/${pattern[0]}/${pattern[1]}`
 
@@ -391,8 +391,7 @@ export default function EditSoal({ bankSoal, soalContent }: EditSoalProps) {
     }
   }
 
-  console.log(quickSoal);
-  
+  console.log(quickSoal)
 
   return (
     <div className="max-w-7xl mx-auto lg:p-6">
@@ -491,7 +490,9 @@ export default function EditSoal({ bankSoal, soalContent }: EditSoalProps) {
                 Kunci Jawaban
               </label>
               <select
-                onChange={(e) => setQuickSoal((prev) => ({ ...prev, kunci: e.target.value as any }))}
+                onChange={(e) =>
+                  setQuickSoal((prev) => ({ ...prev, kunci: e.target.value as any }))
+                }
                 className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white"
               >
                 {['A', 'B', 'C', 'D', 'E'].map((opsi) => (
@@ -642,7 +643,7 @@ function SoalListItem({
               className="text-gray-900 dark:text-white line-clamp-2"
               dangerouslySetInnerHTML={{ __html: soal.soal }}
             ></div>
-            <div className="text-gray-900 dark:text-white flex flex-wrap gap-3">
+            <div className="text-gray-900 dark:text-white flex flex-col gap-2 mt-4">
               <span className="flex flex-wrap">
                 A. <span dangerouslySetInnerHTML={{ __html: soal.A }}></span>
               </span>

@@ -11,7 +11,7 @@ import app from '@adonisjs/core/services/app'
 import { mkdir, readFile, writeFile } from 'fs/promises'
 import { join } from 'path'
 export default class PengelolaanNilaiController {
-  public async index({ auth, inertia }: HttpContext) {
+  public async index({ auth, inertia, session }: HttpContext) {
     auth.check()
     const user = auth.user!
     const dataGuru = await DataGuru.query().where('userId', user.id).first()
@@ -20,7 +20,11 @@ export default class PengelolaanNilaiController {
       JSON.stringify(dataGuru?.nip),
     ])
 
-    return inertia.render('Nilai/PengelolaanNilai', { dataKelas, nip: dataGuru?.nip })
+    return inertia.render('Nilai/PengelolaanNilai', {
+      dataKelas,
+      nip: dataGuru?.nip,
+      session: session.flashMessages.all(),
+    })
   }
 
   public async getMapelByKelas({ response, params }: HttpContext) {
@@ -111,17 +115,18 @@ export default class PengelolaanNilaiController {
         ujianId: ujian,
         semester: '',
         tahunAjaran: dataSemester?.tahunAjaran,
-        dataNilai: filePathJawaban,
+        dataNilai: fileName,
       })
 
       return response.json(fileContent)
     }
-    const fileContent = await readFile(dataNilaiSiswa.dataNilai, 'utf-8')
+    const filePathJawaban = join(app.makePath('storage/nilai'), dataNilaiSiswa.dataNilai)
+    const fileContent = await readFile(filePathJawaban, 'utf-8')
 
     return response.json(fileContent)
   }
 
-  public async save({ request, response, params }: HttpContext) {
+  public async save({ request, response, params, session }: HttpContext) {
     try {
       const { payload } = request.body()
       const { mapel, kelas, ujian } = params
@@ -132,13 +137,18 @@ export default class PengelolaanNilaiController {
 
       await writeFile(filePathJawaban, JSON.stringify(payload))
 
+      session.flash({
+        status: 'success',
+        message: 'Berhasil Menyimpan Data',
+      })
       return response.redirect().back()
     } catch (error) {
       console.error('Error saving data:', error)
-      return response.status(500).json({
-        success: false,
-        error: 'Terjadi kesalahan saat menyimpan data',
+      session.flash({
+        status: 'error',
+        message: 'Terjadi kesalahan saat menyimpan Data',
       })
+      return response.redirect().back()
     }
   }
 }

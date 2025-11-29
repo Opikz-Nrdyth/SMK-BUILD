@@ -33,69 +33,41 @@ export default function StafLayout({ title, children }: StafLayoutProps) {
 
   if (props.user.departement == 'Administrasi' || props.departement == 'Administrasi') {
     SideItemData.push(
+      // 1. Manajemen Pengguna
       {
         name: 'Manajemen Pengguna',
         path: null,
         icon: 'fa-solid fa-user-group',
         childern: [
-          {
-            name: 'Manajemen Siswa',
-            path: '/staf/manajemen-siswa',
-          },
-          {
-            name: 'Siswa Pra Regist',
-            path: '/SuperAdmin/manajemen-siswa/praregist',
-          },
-          {
-            name: 'Manajemen Guru',
-            path: '/staf/manajemen-guru',
-          },
-          {
-            name: 'Manajemen Wali Kelas',
-            path: '/staf/manajemen-wali-kelas',
-          },
+          { name: 'Manajemen Siswa', path: '/staf/manajemen-siswa' },
+          { name: 'Siswa Pra Regist', path: '/SuperAdmin/manajemen-siswa/praregist' },
+          { name: 'Manajemen Guru', path: '/staf/manajemen-guru' },
+          { name: 'Manajemen Wali Kelas', path: '/staf/manajemen-wali-kelas' },
         ],
       },
-      {
-        name: 'manajemen Ujian',
-        path: null,
-        icon: 'fa-solid fa-file-pen',
-        childern: [
-          {
-            name: 'Bank Soal',
-            path: '/staf/bank-soal',
-          },
-          {
-            name: 'Laporan Nilai',
-            path: '/staf/laporan-nilai',
-          },
-          {
-            name: 'Pembatasan Ujian',
-            path: '/staf/partisipasi-ujian',
-          },
-        ],
-      },
+
+      // 2. Manajemen Akademik
       {
         name: 'manajemen Akademik',
         path: null,
         icon: 'fa-solid fa-book-open',
         childern: [
-          {
-            name: 'Tahun Ajaran',
-            path: '/staf/manajemen-tahun-ajaran',
-          },
-          {
-            name: 'Jurusan',
-            path: '/staf/manajemen-jurusan',
-          },
-          {
-            name: 'Kelas',
-            path: '/staf/manajemen-kelas',
-          },
-          {
-            name: 'Mata Pelajaran',
-            path: '/staf/manajemen-mapel',
-          },
+          { name: 'Tahun Ajaran', path: '/staf/manajemen-tahun-ajaran' },
+          { name: 'Jurusan', path: '/staf/manajemen-jurusan' },
+          { name: 'Kelas', path: '/staf/manajemen-kelas' },
+          { name: 'Mata Pelajaran', path: '/staf/manajemen-mapel' },
+        ],
+      },
+
+      // 3. Manajemen Ujian
+      {
+        name: 'manajemen Ujian',
+        path: null,
+        icon: 'fa-solid fa-file-pen',
+        childern: [
+          { name: 'Bank Soal', path: '/staf/bank-soal' },
+          { name: 'Laporan Nilai', path: '/staf/laporan-nilai' },
+          { name: 'Pembatasan Ujian', path: '/staf/partisipasi-ujian' },
         ],
       }
     )
@@ -107,6 +79,11 @@ export default function StafLayout({ title, children }: StafLayoutProps) {
         name: 'Laporan Pembayaran',
         path: '/staf/laporan-pembayaran',
         icon: 'fas fa-money-bill-transfer',
+      },
+      {
+        icon: 'fas fa-money-bill-transfer',
+        name: 'Record Pembayaran',
+        path: '/SuperAdmin/laporan-pembayaran/recordMidtrans',
       },
       {
         name: 'Broadcast Whatsapp',

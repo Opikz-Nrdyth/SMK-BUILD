@@ -1,9 +1,10 @@
-import { router } from '@inertiajs/react'
+import { router, usePage } from '@inertiajs/react'
 import { useState, useEffect } from 'react'
 import UniversalInput from '~/Components/UniversalInput'
 import GuruLayout from '~/Layouts/GuruLayouts'
 import ExcelJS from 'exceljs'
 import ReactDOMServer from 'react-dom/server'
+import { useNotification } from '~/Components/NotificationAlert'
 
 interface Kelas {
   id: string
@@ -26,6 +27,7 @@ interface SiswaData {
     formatif: number[]
     sumatif: number[]
     nonTES: number
+    nilaiSTS?: number
     tes: number
     deskripsi: string
   }
@@ -78,6 +80,16 @@ export default function PengelolaanNilai({ dataKelas, nip }: DataNilai) {
     value: item.id,
   }))
 
+  const { props } = usePage() as any
+
+  const { notify } = useNotification()
+
+  useEffect(() => {
+    if (props?.session?.status) {
+      notify(props?.session?.message, props?.session?.status)
+    }
+  }, [props.session])
+
   // Initialize editedNilai when metaDataNilai changes
   useEffect(() => {
     if (metaDataNilai?.data) {
@@ -87,6 +99,7 @@ export default function PengelolaanNilai({ dataKelas, nip }: DataNilai) {
           formatif: [...siswa.structure.formatif],
           sumatif: [...siswa.structure.sumatif],
           tes: siswa.structure.tes,
+          nilaiSTS: siswa.structure.nilaiSTS ?? siswa.nilai,
           nonTES: siswa.structure.nonTES,
           deskripsi: siswa.structure.deskripsi,
         }
@@ -138,7 +151,7 @@ export default function PengelolaanNilai({ dataKelas, nip }: DataNilai) {
     nisn: string,
     type: 'formatif' | 'sumatif' | 'nilaiSTS' | 'nonTES' | 'tes' | 'deskripsi',
     index: number | null,
-    value: string
+    value: any
   ) => {
     setEditedNilai((prev) => {
       const currentSiswa = prev[nisn] || { formatif: [], sumatif: [] }
@@ -172,14 +185,31 @@ export default function PengelolaanNilai({ dataKelas, nip }: DataNilai) {
   const addColumn = (type: 'formatif' | 'sumatif') => {
     setEditedNilai((prev) => {
       const newEditedNilai = { ...prev }
+      const typeSum = 'formatif'
 
       Object.keys(newEditedNilai).forEach((nisn) => {
         const currentSiswa = newEditedNilai[nisn]
-        const newArray = [...(currentSiswa[type] || []), 0]
+        const newArray = [...(currentSiswa[typeSum] || []), 0]
 
         newEditedNilai[nisn] = {
           ...currentSiswa,
-          [type]: newArray,
+          [typeSum]: newArray,
+        }
+      })
+
+      return newEditedNilai
+    })
+    setEditedNilai((prev) => {
+      const newEditedNilai = { ...prev }
+      const typeSum = 'sumatif'
+
+      Object.keys(newEditedNilai).forEach((nisn) => {
+        const currentSiswa = newEditedNilai[nisn]
+        const newArray = [...(currentSiswa[typeSum] || []), 0]
+
+        newEditedNilai[nisn] = {
+          ...currentSiswa,
+          [typeSum]: newArray,
         }
       })
 
@@ -224,13 +254,21 @@ export default function PengelolaanNilai({ dataKelas, nip }: DataNilai) {
         const naSumatif = calculateNA(sumatifNilai)
         const deskripsi = siswaNilai?.deskripsi || ''
         const siswaDenganTotal = metaDataNilai.data.map((siswa) => {
+          const nilaiSiswa = editedNilai[siswa.nisn]
+
           const formatif = editedNilai[siswa.nisn]?.formatif || siswa.structure.formatif
           const sumatif = editedNilai[siswa.nisn]?.sumatif || siswa.structure.sumatif
-          const sumFormatif = formatif.reduce((a, b) => a + b, 0)
-          const sumSumatif = sumatif.reduce((a, b) => a + b, 0)
-          const totalNilai = (sumFormatif + sumSumatif) / siswa.nilai
+          const nilaiSTS =
+            nilaiSiswa?.nilaiSTS !== undefined ? parseInt(String(nilaiSiswa.nilaiSTS)) : siswa.nilai
+          const sumFormatif = calculateNA(formatif)
+          const sumSumatif = calculateNA(sumatif)
+          let totalNilai = (sumFormatif + sumSumatif + nilaiSTS) / 3
+          if (nilaiSTS == 0) {
+            totalNilai = 0
+          }
           return { ...siswa, totalNilai }
         })
+
         const siswaTerurut = [...siswaDenganTotal].sort((a, b) => b.totalNilai - a.totalNilai)
 
         const rankingMap = {} as any
@@ -244,21 +282,22 @@ export default function PengelolaanNilai({ dataKelas, nip }: DataNilai) {
           calculated: {
             naFormatif: naFormatif.toFixed(0),
             naSumatif: naSumatif.toFixed(0),
-            naSumatifFinal: nilaiSTS,
-            nilaiRaport: ((naFormatif + naSumatif + nilaiSTS) / 3).toFixed(0),
+            naSumatifFinal: item.nilai,
+            nilaiRaport: ((naFormatif + naSumatif + parseInt(String(nilaiSTS))) / 3).toFixed(0),
             ranking: rankingMap[item.nisn],
           },
           structure: {
             formatif: formatifNilai,
             sumatif: sumatifNilai,
             nonTES: siswaNilai?.nonTES,
+            nilaiSTS: parseInt(String(nilaiSTS)),
             tes: siswaNilai?.tes,
             deskripsi: deskripsi,
           },
         }
       })
 
-      router.post(
+      const response = router.post(
         `/guru/pengelolaan-nilai/save/${selectedValue.mapel}/${selectedValue.kelas}/${selectedValue.ujian}`,
         {
           payload: {
@@ -272,6 +311,8 @@ export default function PengelolaanNilai({ dataKelas, nip }: DataNilai) {
           },
         }
       )
+
+      console.log(response)
     } catch (error) {
       console.error('Error saving changes:', error)
       alert('Terjadi kesalahan saat menyimpan')
@@ -693,7 +734,7 @@ export default function PengelolaanNilai({ dataKelas, nip }: DataNilai) {
             const nilaiSTS = siswaNilai?.nilaiSTS !== undefined ? siswaNilai.nilaiSTS : item.nilai
             const naFormatif = calculateNA(formatifNilai)
             const naSumatif = calculateNA(sumatifNilai)
-            const NilaiRaport = (naFormatif + naSumatif + nilaiSTS) / 3
+            const NilaiRaport = (naFormatif + naSumatif + parseInt(String(nilaiSTS))) / 3
             const deskripsi = siswaNilai?.deskripsi || ''
 
             const siswaDenganTotal = metaDataNilai.data.map((siswa) => {
@@ -827,7 +868,6 @@ export default function PengelolaanNilai({ dataKelas, nip }: DataNilai) {
     newWindow?.close()
   }
 
-  // Get max columns for formatting
   const maxFormatifColumns =
     metaDataNilai?.data.reduce((max, siswa) => {
       const currentCols =
@@ -840,6 +880,67 @@ export default function PengelolaanNilai({ dataKelas, nip }: DataNilai) {
       const currentCols = editedNilai[siswa.nisn]?.sumatif?.length || siswa.structure.sumatif.length
       return Math.max(max, currentCols)
     }, 0) || 0
+
+  const generateRandomValue = (min: number = 60, max: number = 100): number => {
+    return Math.floor(Math.random() * (max - min + 1)) + min
+  }
+
+  const autoFillNilai = (type: 'formatif' | 'sumatif' | 'all') => {
+    if (!metaDataNilai?.data) {
+      alert('Data siswa belum dimuat')
+      return
+    }
+
+    setEditedNilai((prev) => {
+      const newEditedNilai = { ...prev }
+
+      metaDataNilai.data.forEach((siswa) => {
+        const currentSiswa = newEditedNilai[siswa.nisn] || {
+          formatif: [],
+          sumatif: [],
+          nonTES: 0,
+          tes: 0,
+          deskripsi: '',
+        }
+
+        // Generate nilai untuk Formatif (TP)
+        if (type === 'formatif' || type === 'all') {
+          const currentFormatifCount =
+            currentSiswa.formatif?.length || siswa.structure.formatif.length
+          const newFormatif = Array.from(
+            { length: currentFormatifCount },
+            () => generateRandomValue(70, 95) // Nilai formatif biasanya lebih tinggi
+          )
+          currentSiswa.formatif = newFormatif
+        }
+
+        // Generate nilai untuk Sumatif (SUM)
+        if (type === 'sumatif' || type === 'all') {
+          const currentSumatifCount = currentSiswa.sumatif?.length || siswa.structure.sumatif.length
+          const newSumatif = Array.from(
+            { length: currentSumatifCount },
+            () => generateRandomValue(65, 90) // Nilai sumatif variasi lebih luas
+          )
+          currentSiswa.sumatif = newSumatif
+        }
+
+        // Generate nilai untuk Non-TES dan TES jika type adalah 'all'
+        if (type === 'all') {
+          currentSiswa.nonTES = generateRandomValue(70, 95)
+          currentSiswa.tes = generateRandomValue(65, 90)
+        }
+
+        newEditedNilai[siswa.nisn] = currentSiswa
+      })
+
+      return newEditedNilai
+    })
+
+    // Notifikasi sukses
+    alert(
+      `Nilai ${type === 'all' ? 'TP dan SUM' : type.toUpperCase()} berhasil diisi secara otomatis!`
+    )
+  }
 
   return (
     <div className="max-w-7xl mx-auto lg:p-6">
@@ -1130,15 +1231,18 @@ export default function PengelolaanNilai({ dataKelas, nip }: DataNilai) {
               const nilaiSTS = siswaNilai?.nilaiSTS !== undefined ? siswaNilai.nilaiSTS : item.nilai
               const naFormatif = calculateNA(formatifNilai)
               const naSumatif = calculateNA(sumatifNilai)
-              const NilaiRaport = (naFormatif + naSumatif + nilaiSTS) / 3
+              const NilaiRaport = (naFormatif + naSumatif + parseInt(String(nilaiSTS))) / 3
               const deskripsi = siswaNilai?.deskripsi || ''
 
               const siswaDenganTotal = metaDataNilai.data.map((siswa) => {
+                const nilaiSiswa = editedNilai[siswa.nisn]
                 const formatif = editedNilai[siswa.nisn]?.formatif || siswa.structure.formatif
                 const sumatif = editedNilai[siswa.nisn]?.sumatif || siswa.structure.sumatif
-                const sumFormatif = formatif.reduce((a, b) => a + b, 0)
-                const sumSumatif = sumatif.reduce((a, b) => a + b, 0)
-                const totalNilai = (sumFormatif + sumSumatif) / siswa.nilai
+                const nilaiSTS =
+                  nilaiSiswa?.nilaiSTS !== undefined ? nilaiSiswa.nilaiSTS : siswa.nilai
+                const sumFormatif = calculateNA(formatif)
+                const sumSumatif = calculateNA(sumatif)
+                const totalNilai = (sumFormatif + sumSumatif + nilaiSTS) / 3
                 return { ...siswa, totalNilai }
               })
               const siswaTerurut = [...siswaDenganTotal].sort((a, b) => b.totalNilai - a.totalNilai)
@@ -1147,6 +1251,11 @@ export default function PengelolaanNilai({ dataKelas, nip }: DataNilai) {
               siswaTerurut.forEach((s, i) => {
                 rankingMap[s.nisn] = i + 1
               })
+
+              const naSumatifFinal =
+                typeof item?.calculated?.naSumatifFinal == 'string'
+                  ? parseInt(item?.calculated?.naSumatifFinal)
+                  : item?.calculated?.naSumatifFinal
 
               return (
                 <tr key={item.nisn} className="hover:bg-gray-50 dark:hover:bg-gray-800">
@@ -1210,7 +1319,20 @@ export default function PengelolaanNilai({ dataKelas, nip }: DataNilai) {
 
                   {/* Nilai STS */}
                   <td className="px-4 py-4 text-center text-gray-500 dark:text-gray-400 font-medium">
-                    {nilaiSTS}
+                    <input
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      min={1}
+                      max={100}
+                      maxLength={3}
+                      className="w-full rounded-md px-3 py-2 bg-transparent dark:border-gray-600 text-gray-900 border focus:outline-none text-center dark:text-white"
+                      type="text"
+                      value={nilaiSTS || ''}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value) > 100 ? 100 : e.target.value
+                        handleNilaiChange(item.nisn, 'nilaiSTS', null, value)
+                      }}
+                    />
                   </td>
 
                   {/* Sumatif Akhir Semester */}
@@ -1247,7 +1369,7 @@ export default function PengelolaanNilai({ dataKelas, nip }: DataNilai) {
                     />
                   </td>
                   <td className="px-4 py-4 text-center text-gray-500 dark:text-gray-400 font-medium">
-                    {item.calculated.naSumatifFinal.toFixed(0)}
+                    {naSumatifFinal.toFixed(0)}
                   </td>
 
                   {/* Nilai Rapot & Ranking */}
@@ -1280,6 +1402,29 @@ export default function PengelolaanNilai({ dataKelas, nip }: DataNilai) {
             })}
           </tbody>
         </table>
+        <div className="flex gap-1">
+          <button
+            onClick={() => autoFillNilai('formatif')}
+            className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg font-medium text-sm"
+            title="Isi nilai TP otomatis"
+          >
+            Auto TP
+          </button>
+          <button
+            onClick={() => autoFillNilai('sumatif')}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg font-medium text-sm"
+            title="Isi nilai SUM otomatis"
+          >
+            Auto SUM
+          </button>
+          <button
+            onClick={() => autoFillNilai('all')}
+            className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg font-medium text-sm"
+            title="Isi semua nilai otomatis"
+          >
+            Auto All
+          </button>
+        </div>
       </div>
     </div>
   )

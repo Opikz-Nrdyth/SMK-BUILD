@@ -10,14 +10,18 @@ import app from '@adonisjs/core/services/app';
 import { mkdir, readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
 export default class PengelolaanNilaiController {
-    async index({ auth, inertia }) {
+    async index({ auth, inertia, session }) {
         auth.check();
         const user = auth.user;
         const dataGuru = await DataGuru.query().where('userId', user.id).first();
         const dataKelas = await DataKelas.query().whereRaw('JSON_CONTAINS(guru_pengampu, ?)', [
             JSON.stringify(dataGuru?.nip),
         ]);
-        return inertia.render('Nilai/PengelolaanNilai', { dataKelas, nip: dataGuru?.nip });
+        return inertia.render('Nilai/PengelolaanNilai', {
+            dataKelas,
+            nip: dataGuru?.nip,
+            session: session.flashMessages.all(),
+        });
     }
     async getMapelByKelas({ response, params }) {
         const { id } = params;
@@ -90,14 +94,15 @@ export default class PengelolaanNilaiController {
                 ujianId: ujian,
                 semester: '',
                 tahunAjaran: dataSemester?.tahunAjaran,
-                dataNilai: filePathJawaban,
+                dataNilai: fileName,
             });
             return response.json(fileContent);
         }
-        const fileContent = await readFile(dataNilaiSiswa.dataNilai, 'utf-8');
+        const filePathJawaban = join(app.makePath('storage/nilai'), dataNilaiSiswa.dataNilai);
+        const fileContent = await readFile(filePathJawaban, 'utf-8');
         return response.json(fileContent);
     }
-    async save({ request, response, params }) {
+    async save({ request, response, params, session }) {
         try {
             const { payload } = request.body();
             const { mapel, kelas, ujian } = params;
@@ -105,14 +110,19 @@ export default class PengelolaanNilaiController {
             const filePathJawaban = join(app.makePath('storage/nilai'), fileName);
             await mkdir(app.makePath('storage/nilai'), { recursive: true });
             await writeFile(filePathJawaban, JSON.stringify(payload));
+            session.flash({
+                status: 'success',
+                message: 'Berhasil Menyimpan Data',
+            });
             return response.redirect().back();
         }
         catch (error) {
             console.error('Error saving data:', error);
-            return response.status(500).json({
-                success: false,
-                error: 'Terjadi kesalahan saat menyimpan data',
+            session.flash({
+                status: 'error',
+                message: 'Terjadi kesalahan saat menyimpan Data',
             });
+            return response.redirect().back();
         }
     }
 }

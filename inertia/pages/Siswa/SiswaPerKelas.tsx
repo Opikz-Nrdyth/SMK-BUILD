@@ -161,9 +161,9 @@ export default function SiswaPerKelas({
                   </div>
                   <div className="text-sm text-gray-500 dark:text-gray-400">Siswa</div>
                 </div>
-                <div className="text-sm text-gray-700 dark:text-gray-100 mt-2">
+                <div className="text-sm text-gray-700 dark:text-gray-100 mt-2 flex flex-col">
                   Wali Kelas:{' '}
-                  <span className="bg-yellow-600 rounded-full px-2 py-1 text-white">
+                  <span className="bg-yellow-600 rounded-full px-2 py-1 text-white text-nowrap text-xs">
                     {kelas.waliKelas}
                   </span>
                 </div>
@@ -217,6 +217,7 @@ export default function SiswaPerKelas({
           onPageChange: handlePageChange,
         }}
         viewModal
+        editable={`/${path[1]}/${path[2]}`}
         serverSearch={{
           value: search,
           onChange: handleSearch,

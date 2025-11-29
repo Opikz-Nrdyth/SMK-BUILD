@@ -353,7 +353,6 @@ export default function Index({
           {
             header: 'Hari',
             accessor: 'hari' as const,
-            isTime: { mode: 'date', withDay: true },
           },
           {
             header: 'Aksi',

@@ -23,128 +23,86 @@ export default function SuperAdminLayout({ title, children }: SuperAdminLayoutPr
   const { notify } = useNotification()
 
   const SideItemData = [
+    // 1. Dashboard
     {
       name: 'Dashboard',
       path: '/SuperAdmin',
       icon: 'fa-solid fa-gauge-high',
     },
+
+    // 2. Manajemen Pengguna
     {
       name: 'Manajemen Pengguna',
       path: null,
       icon: 'fa-solid fa-user-group',
       childern: [
-        {
-          name: 'Manajemen Siswa',
-          path: '/SuperAdmin/manajemen-siswa',
-        },
-        {
-          name: 'Siswa Pra Regist',
-          path: '/SuperAdmin/manajemen-siswa/praregist',
-        },
-        {
-          name: 'Manajemen Guru',
-          path: '/SuperAdmin/manajemen-guru',
-        },
-        {
-          name: 'Manajemen Wali Kelas',
-          path: '/SuperAdmin/manajemen-wali-kelas',
-        },
-        {
-          name: 'Manajemen Staf',
-          path: '/SuperAdmin/manajemen-staf',
-        },
-        {
-          name: 'Manajemen Super Admin',
-          path: '/SuperAdmin/data-super-admin',
-        },
+        { name: 'Manajemen Siswa', path: '/SuperAdmin/manajemen-siswa' },
+        { name: 'Siswa Pra Regist', path: '/SuperAdmin/manajemen-siswa/praregist' },
+        { name: 'Manajemen Guru', path: '/SuperAdmin/manajemen-guru' },
+        { name: 'Manajemen Wali Kelas', path: '/SuperAdmin/manajemen-wali-kelas' },
+        { name: 'Manajemen Staf', path: '/SuperAdmin/manajemen-staf' },
+        { name: 'Manajemen Super Admin', path: '/SuperAdmin/data-super-admin' },
       ],
     },
-    {
-      name: 'manajemen Ujian',
-      path: null,
-      icon: 'fa-solid fa-file-pen',
-      childern: [
-        {
-          name: 'Bank Soal',
-          path: '/SuperAdmin/bank-soal',
-        },
-        {
-          name: 'Manajemen Jawaban',
-          path: '/SuperAdmin/manajemen-kehadiran',
-        },
-        {
-          name: 'Partisipasi Ujian',
-          path: '/SuperAdmin/partisipasi-ujian',
-        },
-      ],
-    },
+
+    // 3. Manajemen Akademik
     {
       name: 'manajemen Akademik',
       path: null,
       icon: 'fa-solid fa-book-open',
       childern: [
-        {
-          name: 'Tahun Ajaran',
-          path: '/SuperAdmin/manajemen-tahun-ajaran',
-        },
-        {
-          name: 'Jurusan',
-          path: '/SuperAdmin/manajemen-jurusan',
-        },
-        {
-          name: 'Kelas',
-          path: '/SuperAdmin/manajemen-kelas',
-        },
-        {
-          name: 'Mata Pelajaran',
-          path: '/SuperAdmin/manajemen-mapel',
-        },
+        { name: 'Tahun Ajaran', path: '/SuperAdmin/manajemen-tahun-ajaran' },
+        { name: 'Jurusan', path: '/SuperAdmin/manajemen-jurusan' },
+        { name: 'Kelas', path: '/SuperAdmin/manajemen-kelas' },
+        { name: 'Mata Pelajaran', path: '/SuperAdmin/manajemen-mapel' },
       ],
     },
+
+    // 4. Manajemen Ujian
+    {
+      name: 'manajemen Ujian',
+      path: null,
+      icon: 'fa-solid fa-file-pen',
+      childern: [
+        { name: 'Bank Soal', path: '/SuperAdmin/bank-soal' },
+        { name: 'Manajemen Jawaban', path: '/SuperAdmin/manajemen-kehadiran' },
+        { name: 'Partisipasi Ujian', path: '/SuperAdmin/partisipasi-ujian' },
+      ],
+    },
+
+    // 5. Laporan & Hasil
     {
       name: 'Laporan & Hasil',
       path: null,
       icon: 'fa-solid fa-file-lines',
       childern: [
-        {
-          name: 'Laporan Absensi',
-          path: '/SuperAdmin/laporan-absensi',
-        },
-        {
-          name: 'Laporan Pembayaran',
-          path: '/SuperAdmin/laporan-pembayaran',
-        },
-        {
-          name: 'Laporan Nilai',
-          path: '/SuperAdmin/laporan-nilai',
-        },
+        { name: 'Laporan Absensi', path: '/SuperAdmin/laporan-absensi' },
+        { name: 'Laporan Pembayaran', path: '/SuperAdmin/laporan-pembayaran' },
+        { name: 'Record Pembayaran', path: '/SuperAdmin/laporan-pembayaran/recordMidtrans' },
+        { name: 'Laporan Nilai', path: '/SuperAdmin/laporan-nilai' },
       ],
     },
+
+    // 6. Multimedia
     {
       name: 'Multimedia',
       path: null,
       icon: 'fa-solid fa-icons',
       childern: [
-        {
-          name: 'Pengumuman',
-          path: '/SuperAdmin/manajemen-informasi',
-        },
-        {
-          name: 'Aktivitas',
-          path: '/SuperAdmin/manajemen-aktivitas',
-        },
-        {
-          name: 'Iklan',
-          path: '/SuperAdmin/manajemen-ads',
-        },
+        { name: 'Pengumuman', path: '/SuperAdmin/manajemen-informasi' },
+        { name: 'Aktivitas', path: '/SuperAdmin/manajemen-aktivitas' },
+        { name: 'Iklan', path: '/SuperAdmin/manajemen-ads' },
       ],
     },
+
+    // 7. Whatsapp
     {
       name: 'Whatsapp Connection',
       path: '/SuperAdmin/whatsapp',
       icon: 'fa-brands fa-whatsapp',
     },
 
+    // 8. Pengaturan Website
     {
       name: 'Pengaturan Website',
       path: '/SuperAdmin/landing-page',

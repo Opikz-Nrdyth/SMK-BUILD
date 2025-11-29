@@ -24,44 +24,41 @@ export default function GuruLayout({ title, children }: LayoutProps) {
   const { notify } = useNotification()
 
   const sideItemData = [
+    // 1. Dashboard
     {
       name: 'Dashboard',
       path: '/guru',
       icon: 'fa-solid fa-gauge-high',
     },
+
+    // 2. Manajemen Siswa
     {
       name: 'Manajemen Siswa',
       path: '/guru/manajemen-siswa',
       icon: 'fa-solid fa-user-group',
     },
+
+    // 3. Manajemen Ujian
     {
       name: 'manajemen Ujian',
       path: null,
       icon: 'fa-solid fa-file-pen',
       childern: [
-        {
-          name: 'Bank Soal',
-          path: '/guru/bank-soal',
-        },
-        {
-          name: 'Manajemen Jawaban',
-          path: '/guru/manajemen-kehadiran',
-        },
-        {
-          name: 'Manajemen Nilai',
-          path: '/guru/laporan-nilai',
-        },
-        {
-          name: 'Pengelolaan Nilai',
-          path: '/guru/pengelolaan-nilai',
-        },
+        { name: 'Bank Soal', path: '/guru/bank-soal' },
+        { name: 'Manajemen Jawaban', path: '/guru/manajemen-kehadiran' },
+        { name: 'Manajemen Nilai', path: '/guru/laporan-nilai' },
+        { name: 'Pengelolaan Nilai', path: '/guru/pengelolaan-nilai' },
       ],
     },
+
+    // 4. Manajemen Absensi
     {
       name: 'Manajemen Absensi',
       path: '/guru/laporan-absensi',
       icon: 'fa-solid fa-file-lines',
     },
+
+    // 5. Pengumuman
     {
       name: 'Pengumuman',
       path: '/guru/manajemen-informasi',
@@ -78,6 +75,10 @@ export default function GuruLayout({ title, children }: LayoutProps) {
         {
           name: 'Pembayaran',
           path: '/guru/laporan-pembayaran',
+        },
+        {
+          name: 'Rekap Nilai',
+          path: '/guru/rekap-nilai',
         },
         {
           name: 'Absensi Wali Kelas',
