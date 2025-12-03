@@ -6,6 +6,8 @@ import type { NextFn } from '@adonisjs/core/types/http'
 export default class WebDataMiddleware {
   public async handle(ctx: HttpContext, next: NextFn) {
     const dataWeb = await DataWebsite.getAllSettings()
+    const page = ctx.request.input('page', 1)
+    const search = ctx.request.input('search', '')
     ctx.inertia.share({
       phone: dataWeb.school_phone,
       fax: dataWeb.fax,
@@ -23,6 +25,8 @@ export default class WebDataMiddleware {
       sejarah: dataWeb.school_description,
       address: dataWeb.school_address,
       login: dataWeb.text_login,
+      page: page,
+      searchQuery: search,
       hero_background:
         dataWeb.hero_background_image ?? 'https://placehold.co/400x400?text=No+Image',
     })

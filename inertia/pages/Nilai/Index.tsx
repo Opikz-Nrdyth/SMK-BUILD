@@ -1,4 +1,4 @@
-// resources/js/Pages/Kehadiran/Index.tsx
+// resources/js/Pages/Nilai/Index.tsx
 import { useState, useEffect } from 'react'
 import { router, usePage } from '@inertiajs/react'
 import DataTable from '~/Components/TabelData'
@@ -11,20 +11,26 @@ import StafLayout from '~/Layouts/StafLayouts'
 import GuruLayout from '~/Layouts/GuruLayouts'
 import { useNotification } from '~/Components/NotificationAlert'
 
-type ViewMode = 'mapel' | 'siswa' | 'detail'
-
 export default function Index({
   kehadirans,
   kehadiranPaginate,
   searchQuery = '',
+  kelasFilter = '',
+  ujianFilter = '',
   namaUjianFilter = '',
-  listUjian,
+  semuaKelas = [],
+  listUjian = [],
+  selectedUjian = null,
 }: {
   kehadirans: Nilai[]
   kehadiranPaginate: any
   searchQuery?: string
+  kelasFilter?: string
+  ujianFilter?: string
   namaUjianFilter?: string
+  semuaKelas: any[]
   listUjian: any[]
+  selectedUjian: any
 }) {
   const { props } = usePage() as any
 
@@ -43,17 +49,29 @@ export default function Index({
   const [currentPage, setCurrentPage] = useState(kehadiranPaginate?.currentPage || 1)
   const [lastPage, setLastPage] = useState(kehadiranPaginate?.lastPage || 1)
   const [search, setSearch] = useState(searchQuery)
+  const [kelasId, setKelasId] = useState(kelasFilter)
+  const [ujianId, setUjianId] = useState(ujianFilter)
   const [namaUjian, setNamaUjian] = useState(namaUjianFilter)
 
-  // State untuk folder structure
-  const [viewMode, setViewMode] = useState<ViewMode>('mapel')
-  const [selectedMapel, setSelectedMapel] = useState<any>(null)
-  const [selectedSiswa, setSelectedSiswa] = useState<any>(null)
-  const [breadcrumbs, setBreadcrumbs] = useState<{ label: string; action: () => void }[]>([])
+  const romanToNumber = (str) => {
+    const map = { X: 10, XI: 11, XII: 12 }
+    return map[str] || 0
+  }
 
-  // State untuk pagination siswa
-  const [siswaCurrentPage, setSiswaCurrentPage] = useState(1)
-  const [siswaSearch, setSiswaSearch] = useState('')
+  const sorted = semuaKelas.sort((a, b) => {
+    // ambil jenjang dari namaKelas, contoh: "X-TELIND-2"
+    const jenjangA = a.namaKelas.split('-')[0]
+    const jenjangB = b.namaKelas.split('-')[0]
+
+    const numA = romanToNumber(jenjangA)
+    const numB = romanToNumber(jenjangB)
+
+    // sort berdasarkan jenjang dulu
+    if (numA !== numB) return numA - numB
+
+    // jika jenjang sama, sort alfabet nama kelas
+    return a.namaKelas.localeCompare(b.namaKelas)
+  })
 
   useEffect(() => {
     if (!kehadirans) return
@@ -71,215 +89,97 @@ export default function Index({
         jenisUjian: item?.ujian?.jenisUjian || '-',
         mapel: item?.ujian?.mapel?.namaMataPelajaran || '-',
         mapelId: item?.ujian?.mapel?.id || '-',
+        jenjang: item?.ujian?.jenjang || '-',
       })
     })
     setData(newData)
   }, [kehadirans])
 
-  // Group data by mapel
-  const mapelData = listUjian.reduce((acc: any, ujian: any) => {
-    const mapelName = ujian.mapel?.namaMataPelajaran || 'Tidak ada mapel'
-    const jenjang = ujian.mapel?.jenjang || 'Tidak ada mapel'
-    const mapelId = ujian.mapel?.id || 'no-id'
-
-    if (!acc[mapelId]) {
-      acc[mapelId] = {
-        id: mapelId,
-        namaMapel: mapelName,
-        jenjang,
-        jumlahUjian: 0,
-        jumlahSiswa: 0,
-        ujianList: [],
-      }
-    }
-
-    // Hitung siswa untuk ujian ini
-    const siswaUjian = data.filter((item: any) => item?.ujianId === ujian.id)
-
-    acc[mapelId].jumlahUjian += 1
-    acc[mapelId].jumlahSiswa += siswaUjian.length
-    acc[mapelId].ujianList.push({
-      id: ujian.id,
-      namaUjian: ujian.namaUjian,
-      siswa: siswaUjian,
-    })
-
-    return acc
-  }, {})
-
-  // Handler untuk memilih mapel
-  const handleSelectMapel = (mapel: any) => {
-    setSelectedMapel(mapel)
-    setViewMode('siswa')
-    setSiswaCurrentPage(1)
-    setSiswaSearch('')
-    setBreadcrumbs([
-      { label: 'Semua Mapel', action: () => handleBackToMapel() },
-      { label: mapel.namaMapel, action: () => {} },
-    ])
+  // Handler untuk perubahan kelas
+  const handleKelasChange = (value: string) => {
+    setKelasId(value)
+    setUjianId('') // Reset ujian saat kelas berubah
+    applyFilters(value, '', search, 1)
   }
 
-  // Handler untuk memilih siswa
-  const handleSelectSiswa = (siswa: any) => {
-    setSelectedSiswa(siswa)
-    setViewMode('detail')
-    setBreadcrumbs([
-      { label: 'Semua Mapel', action: () => handleBackToMapel() },
-      { label: selectedMapel.namaMapel, action: () => handleBackToSiswa() },
-      { label: siswa.namaSiswa, action: () => {} },
-    ])
+  // Handler untuk perubahan ujian
+  const handleUjianChange = (value: string) => {
+    setUjianId(value)
+    applyFilters(kelasId, value, search, 1)
   }
 
-  // Handler untuk kembali ke mapel
-  const handleBackToMapel = () => {
-    setSelectedMapel(null)
-    setSelectedSiswa(null)
-    setViewMode('mapel')
-    setBreadcrumbs([])
+  // Handler untuk search
+  const handleSearch = (searchTerm: string) => {
+    setSearch(searchTerm)
+    applyFilters(kelasId, ujianId, searchTerm, 1)
   }
 
-  // Handler untuk kembali ke siswa
-  const handleBackToSiswa = () => {
-    setSelectedSiswa(null)
-    setViewMode('siswa')
-    setBreadcrumbs([
-      { label: 'Semua Mapel', action: () => handleBackToMapel() },
-      { label: selectedMapel.namaMapel, action: () => {} },
-    ])
-  }
-
-  // Data siswa untuk view mode 'siswa'
-  const allSiswaData = selectedMapel
-    ? Array.from(
-        new Map(
-          data
-            .filter((item: any) => item?.mapelId === selectedMapel.id)
-            .map((item: any) => [item?.userId, item])
-        ).values()
-      )
-    : []
-
-  // Data detail untuk view mode 'detail'
-  const detailData = selectedSiswa
-    ? data.filter(
-        (item: any) => item?.userId === selectedSiswa.userId && item?.mapelId === selectedMapel.id
-      )
-    : []
-
-  // Hitung statistik untuk siswa
-  const getSiswaStats = (siswa: any) => {
-    const siswaUjian = data.filter(
-      (item: any) => item?.userId === siswa.userId && item?.mapelId === selectedMapel.id
-    )
-
-    const totalUjian = siswaUjian.length
-    const rataRataSkor =
-      totalUjian > 0
-        ? (
-            siswaUjian.reduce((sum: number, item: any) => sum + parseFloat(item?.skor || 0), 0) /
-            totalUjian
-          ).toFixed(2)
-        : 0
-
-    return { totalUjian, rataRataSkor }
-  }
-
-  const optionUjian = listUjian.map((item: any) => ({
-    label: `${item?.namaUjian}/${item?.mapel?.namaMataPelajaran}`,
-    value: item?.id,
-  }))
-
-  const handlePageChange = (page: number) => {
+  // Fungsi untuk apply semua filter
+  const applyFilters = (kelas: string, ujian: string, searchTerm: string, page: number) => {
     router.get(
       `/${baseUrl[1]}/laporan-nilai`,
-      { page, search, nama_ujian: namaUjian },
+      {
+        page,
+        search: searchTerm,
+        kelas_id: kelas,
+        ujian_id: ujian,
+      },
       {
         preserveState: true,
         replace: true,
+        preserveScroll: true,
       }
     )
     setCurrentPage(page)
   }
 
-  const handleSearch = (searchTerm: string) => {
-    setSearch(searchTerm)
-    router.get(
-      `/${baseUrl[1]}/laporan-nilai`,
-      { page: 1, search: searchTerm, nama_ujian: namaUjian },
-      {
-        preserveState: true,
-        replace: true,
-        preserveScroll: true,
-      }
+  // Handler untuk halaman berubah
+  const handlePageChange = (page: number) => {
+    applyFilters(kelasId, ujianId, search, page)
+  }
+
+  // Reset semua filter
+  const handleResetFilters = () => {
+    setKelasId('')
+    setUjianId('')
+    setSearch('')
+    applyFilters('', '', '', 1)
+  }
+
+  // Export Excel
+  const getExportUrl = () => {
+    const params = new URLSearchParams()
+    if (kelasId) params.append('kelas', kelasId)
+    if (ujianId) params.append('ujian', ujianId)
+    if (selectedUjian?.mapel?.namaMataPelajaran) {
+      params.append('mapel', selectedUjian.mapel.namaMataPelajaran)
+    }
+    return `${props.pattern}/cetak?${params.toString()}`
+  }
+
+  // Render Header berdasarkan filter yang aktif
+  const renderHeader = () => {
+    const kelas = semuaKelas.find((k) => k.id === kelasId)
+    const ujian = listUjian.find((u) => u.id === ujianId) || selectedUjian
+
+    return (
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          {kelas ? `Laporan Nilai - ${kelas.namaKelas}` : 'Laporan Nilai'}
+        </h1>
+        {ujian && (
+          <p className="text-gray-600 dark:text-gray-400">
+            Ujian: {ujian.namaUjian} ({ujian.mapel?.namaMataPelajaran})
+          </p>
+        )}
+        {kelas && !ujian && (
+          <p className="text-gray-600 dark:text-gray-400">
+            {kelas.jenjang} - {kelas.namaKelas}
+          </p>
+        )}
+      </div>
     )
-    setCurrentPage(1)
   }
-
-  const handleNamaUjianFilter = (value: string) => {
-    setNamaUjian(value)
-    router.get(
-      `/${baseUrl[1]}/laporan-nilai`,
-      { page: 1, search, nama_ujian: value },
-      {
-        preserveState: true,
-        replace: true,
-        preserveScroll: true,
-      }
-    )
-    setCurrentPage(1)
-  }
-
-  // Handler untuk search siswa (client-side)
-  const handleSiswaSearch = (searchTerm: string) => {
-    setSiswaSearch(searchTerm)
-  }
-
-  // Filter siswa berdasarkan search (client-side)
-  const filteredSiswaData = allSiswaData.filter(
-    (siswa: any) =>
-      siswa.namaSiswa.toLowerCase().includes(siswaSearch.toLowerCase()) ||
-      siswa.nisn.toLowerCase().includes(siswaSearch.toLowerCase()) ||
-      siswa.email.toLowerCase().includes(siswaSearch.toLowerCase())
-  )
-
-  // Render Breadcrumbs
-  const renderBreadcrumbs = () => (
-    <nav className="flex mb-6" aria-label="Breadcrumb">
-      <ol className="inline-flex items-center space-x-1 md:space-x-3">
-        {breadcrumbs.map((crumb, index) => (
-          <li key={index} className="inline-flex items-center">
-            {index > 0 && (
-              <svg
-                className="w-3 h-3 text-gray-400 mx-1"
-                aria-hidden="true"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 6 10"
-              >
-                <path
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="m1 9 4-4-4-4"
-                />
-              </svg>
-            )}
-            <button
-              onClick={crumb.action}
-              className={`inline-flex items-center text-sm font-medium ${
-                index === breadcrumbs.length - 1
-                  ? 'text-gray-500 dark:text-gray-400 cursor-default'
-                  : 'text-gray-700 hover:text-purple-600 dark:text-gray-400 dark:hover:text-white cursor-pointer transition-colors duration-200'
-              }`}
-            >
-              {crumb.label}
-            </button>
-          </li>
-        ))}
-      </ol>
-    </nav>
-  )
 
   return (
     <div className="max-w-7xl mx-auto lg:p-6">
@@ -287,199 +187,190 @@ export default function Index({
 
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            {viewMode === 'mapel' && 'Data Mata Pelajaran'}
-            {viewMode === 'siswa' && `Siswa - ${selectedMapel?.namaMapel}`}
-            {viewMode === 'detail' && `Detail Kehadiran - ${selectedSiswa?.namaSiswa}`}
-          </h1>
-          {breadcrumbs.length > 0 && renderBreadcrumbs()}
-        </div>
-        {selectedMapel && (
+        {renderHeader()}
+        {(kelasId || ujianId) && (
           <a
-            href={`${props.pattern}/cetak?mapel=${selectedMapel?.namaMapel}`}
+            href={getExportUrl()}
             className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors duration-200"
           >
-            <i className="fa-solid fa-file-excel"></i> Export Excell
+            <i className="fa-solid fa-file-excel mr-2"></i> Export Excel
           </a>
         )}
       </div>
 
-      {/* Filter hanya tampil di view mapel */}
-      {viewMode === 'mapel' && (
-        <div className="mb-4">
-          <UniversalInput
-            name="ujian"
-            type="select"
-            options={optionUjian}
-            placeholder="Filter berdasarkan nama ujian..."
-            value={namaUjian}
-            onChange={(e) => handleNamaUjianFilter(e)}
-          />
-        </div>
-      )}
+      {/* Filter Section */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6 border border-purple-200 dark:border-purple-800">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Filter Laporan</h2>
 
-      {/* View: Mapel */}
-      {viewMode === 'mapel' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Object.values(mapelData).map((mapel: any) => (
-            <div
-              key={mapel.id}
-              className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-purple-200 dark:border-purple-800 hover:shadow-lg transition-shadow cursor-pointer hover:border-purple-300 dark:hover:border-purple-600"
-              onClick={() => handleSelectMapel(mapel)}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Filter Kelas */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Pilih Kelas
+            </label>
+            <select
+              value={kelasId}
+              onChange={(e) => handleKelasChange(e.target.value)}
+              className="w-full px-3 py-2 rounded-md border bg-white border-gray-300 text-gray-900 dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
             >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {mapel.namaMapel} ({mapel.jenjang})
-                </h3>
-                <svg
-                  className="w-5 h-5 text-purple-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
-              </div>
+              <option value="">Semua Kelas</option>
+              {sorted.map((kelas) => (
+                <option key={kelas.id} value={kelas.id}>
+                  {kelas.namaKelas}
+                </option>
+              ))}
+            </select>
+          </div>
 
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Jumlah Ujian:</span>
-                  <span className="font-medium text-purple-600 dark:text-purple-400">
-                    {mapel.jumlahUjian}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Total Siswa:</span>
-                  <span className="font-medium text-pink-600 dark:text-pink-400">
-                    {mapel.jumlahSiswa}
-                  </span>
-                </div>
-              </div>
+          {/* Filter Ujian */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Pilih Ujian
+            </label>
+            <select
+              value={ujianId}
+              onChange={(e) => handleUjianChange(e.target.value)}
+              disabled={!kelasId}
+              className="w-full px-3 py-2 rounded-md border bg-white border-gray-300 text-gray-900 dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
+            >
+              <option value="">Semua Ujian</option>
+              {listUjian.map((ujian) => (
+                <option key={ujian.id} value={ujian.id}>
+                  {ujian.namaUjian} - {ujian.mapel?.namaMataPelajaran}
+                </option>
+              ))}
+            </select>
+            {!kelasId && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Pilih kelas terlebih dahulu
+              </p>
+            )}
+          </div>
 
-              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                <p className="text-xs text-purple-500 dark:text-purple-400">
-                  Klik untuk melihat daftar siswa
-                </p>
-              </div>
+          {/* Search */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Cari Siswa
+            </label>
+            <div className="flex">
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSearch(search)}
+                placeholder="Cari nama siswa atau NISN..."
+                className="w-full px-3 py-2 rounded-l-md border bg-white border-gray-300 text-gray-900 dark:bg-gray-800 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
+              />
+              <button
+                onClick={() => handleSearch(search)}
+                className="px-4 py-2 bg-purple-600 text-white rounded-r-md hover:bg-purple-700"
+              >
+                <i className="fa-solid fa-search"></i>
+              </button>
             </div>
-          ))}
-        </div>
-      )}
-
-      {/* View: Siswa (Tabel) */}
-      {viewMode === 'siswa' && (
-        <div>
-          <div className="mb-4 bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 border border-purple-200 dark:border-purple-800">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              Daftar Siswa - {selectedMapel?.namaMapel}
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Total {allSiswaData.length} siswa
-            </p>
           </div>
-
-          <DataTable
-            data={filteredSiswaData.map((siswa: any) => ({
-              ...siswa,
-              ...getSiswaStats(siswa),
-            }))}
-            tabelName="Siswa"
-            columns={[
-              { header: 'NISN', accessor: 'nisn' as const },
-              { header: 'Nama Siswa', accessor: 'namaSiswa' as const },
-              {
-                header: 'Total Ujian',
-                accessor: 'totalUjian' as const,
-              },
-              {
-                header: 'Rata-rata Skor',
-                accessor: 'rataRataSkor' as const,
-              },
-            ]}
-            pageSize={15}
-            placeholder="Cari NISN, nama, atau email..."
-            noDataText="Tidak ada data siswa"
-            onRowClick={(value: any) => handleSelectSiswa(value)}
-            viewModal={true}
-            serverSearch={{
-              value: siswaSearch,
-              onChange: handleSiswaSearch,
-            }}
-            serverPagination={{
-              currentPage,
-              lastPage,
-              total: kehadiranPaginate?.total || 0,
-              onPageChange: handlePageChange,
-            }}
-          />
         </div>
-      )}
 
-      {/* View: Detail Kehadiran */}
-      {viewMode === 'detail' && (
-        <div>
-          <div className="mb-4 bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 border border-purple-200 dark:border-purple-800">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              Detail Kehadiran - {selectedSiswa?.namaSiswa}
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              NISN: {selectedSiswa?.nisn} • Email: {selectedSiswa?.email}
-            </p>
+        {/* Reset Button */}
+        <div className="mt-4">
+          <button
+            onClick={handleResetFilters}
+            className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 dark:bg-gray-600 dark:text-gray-200 dark:hover:bg-gray-500 transition-colors duration-200"
+          >
+            <i className="fa-solid fa-rotate-left mr-2"></i> Reset Filter
+          </button>
+        </div>
+      </div>
+
+      {/* Info Summary */}
+      {(kelasId || ujianId) && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border border-blue-200 dark:border-blue-800">
+            <div className="text-sm text-gray-500 dark:text-gray-400">Total Siswa</div>
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+              {new Set(data.map((item: any) => item.userId)).size}
+            </div>
           </div>
-
-          <DataTable
-            data={detailData}
-            tabelName="Kehadiran"
-            columns={[
-              { header: 'Nama Ujian', accessor: 'namaUjian' as const },
-              { header: 'Jenis Ujian', accessor: 'jenisUjian' as const },
-              { header: 'Skor', accessor: 'skor' as const },
-              { header: 'Benar', accessor: 'benar' as const },
-              { header: 'Salah', accessor: 'salah' as const },
-              {
-                header: 'Tanggal Ujian',
-                isTime: { mode: 'date', withDay: true },
-                accessor: 'createdAt' as const,
-              },
-            ]}
-            pageSize={15}
-            placeholder="Cari nama ujian..."
-            noDataText="Tidak ada data kehadiran"
-            onRowClick={(value: any) => setDataSelected(value)}
-            viewModal={true}
-            serverPagination={{
-              currentPage,
-              lastPage,
-              total: kehadiranPaginate?.total || 0,
-              onPageChange: handlePageChange,
-            }}
-            serverSearch={{
-              value: search,
-              onChange: handleSearch,
-            }}
-          />
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border border-green-200 dark:border-green-800">
+            <div className="text-sm text-gray-500 dark:text-gray-400">Total Ujian</div>
+            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+              {data.length}
+            </div>
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border border-yellow-200 dark:border-yellow-800">
+            <div className="text-sm text-gray-500 dark:text-gray-400">Rata-rata Nilai</div>
+            <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+              {data.length > 0
+                ? (
+                    data.reduce((sum: number, item: any) => sum + (parseFloat(item.skor) || 0), 0) /
+                    data.length
+                  ).toFixed(2)
+                : '0.00'}
+            </div>
+          </div>
         </div>
       )}
 
+      {/* Data Table */}
+      <DataTable
+        data={data}
+        tabelName="Laporan Nilai"
+        columns={[
+          { header: 'NISN', accessor: 'nisn' as const },
+          { header: 'Nama Siswa', accessor: 'namaSiswa' as const },
+          { header: 'Kelas', accessor: 'jenjang' as const },
+          { header: 'Mata Pelajaran', accessor: 'mapel' as const },
+          { header: 'Ujian', accessor: 'namaUjian' as const },
+          { header: 'Nilai', accessor: 'skor' as const },
+          { header: 'Status', accessor: 'status' as const },
+          {
+            header: 'Tanggal',
+            isTime: { mode: 'date', withDay: true },
+            accessor: 'createdAt' as const,
+          },
+        ]}
+        pageSize={15}
+        placeholder="Cari data..."
+        noDataText={
+          kelasId || ujianId
+            ? 'Tidak ada data untuk filter yang dipilih'
+            : 'Pilih filter untuk melihat data'
+        }
+        onRowClick={(value: any) => {
+          const newValue = {
+            nisn: value.nisn,
+            nama: value.namaSiswa,
+            ujian: value.namaUjian,
+            totalSoal: value.totalSoal,
+            terjawab: value.terjawab,
+            tidakTerjawab: value.tidakTerjawab,
+            status: value.status,
+            nilai: {
+              benar: value.benar,
+              salah: value.salah,
+              skor: Number(value.skor).toFixed(1),
+            },
+          }
+
+          setDataSelected(newValue)
+        }}
+        viewModal={true}
+        serverPagination={{
+          currentPage,
+          lastPage,
+          total: kehadiranPaginate?.total || 0,
+          onPageChange: handlePageChange,
+        }}
+        serverSearch={{
+          value: search,
+          onChange: handleSearch,
+        }}
+      />
+
+      {/* Modal Detail */}
       <ModalView
         data={dataSelected}
-        exclude={[
-          '*id',
-          'userId',
-          'ujianId',
-          'jawabanFile',
-          'ujian.jurusan',
-          'ujian.penulis',
-          'ujian.mapel.guruAmpu',
-          '*mapelId',
-          'user',
-        ]}
+        exclude={['*id', 'userId', 'ujianId', 'jawabanFile', 'ujian', '*mapelId', 'user']}
         open={!!dataSelected}
         onClose={() => setDataSelected(null)}
       />

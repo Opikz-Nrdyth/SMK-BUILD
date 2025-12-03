@@ -3,6 +3,8 @@ import app from '@adonisjs/core/services/app';
 export default class WebDataMiddleware {
     async handle(ctx, next) {
         const dataWeb = await DataWebsite.getAllSettings();
+        const page = ctx.request.input('page', 1);
+        const search = ctx.request.input('search', '');
         ctx.inertia.share({
             phone: dataWeb.school_phone,
             fax: dataWeb.fax,
@@ -20,6 +22,8 @@ export default class WebDataMiddleware {
             sejarah: dataWeb.school_description,
             address: dataWeb.school_address,
             login: dataWeb.text_login,
+            page: page,
+            searchQuery: search,
             hero_background: dataWeb.hero_background_image ?? 'https://placehold.co/400x400?text=No+Image',
         });
         await next();

@@ -103,7 +103,7 @@ export default function Index({
 
       <ModalView
         data={dataSelected}
-        exclude={['siswa', 'guru', 'siswaData', 'guruPengampu']}
+        exclude={['siswa', 'guru', 'siswaData', 'guruPengampu', 'guruMapelMapping', '*userId']}
         open={!!dataSelected}
         onClose={() => setDataSelected(null)}
       />

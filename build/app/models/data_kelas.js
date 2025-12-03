@@ -11,6 +11,7 @@ import { DateTime } from 'luxon';
 import { BaseModel, beforeCreate, belongsTo, column } from '@adonisjs/lucid/orm';
 import { randomUUID } from 'crypto';
 import DataGuru from './data_guru.js';
+import DataSiswa from './data_siswa.js';
 export default class DataKelas extends BaseModel {
     static async generateUuid(kelas) {
         kelas.id = randomUUID();
@@ -79,6 +80,22 @@ export default class DataKelas extends BaseModel {
             }
         });
         return result;
+    }
+    async getSiswaWithUsers() {
+        const siswaArray = this.getSiswaArray();
+        if (siswaArray.length === 0)
+            return [];
+        return await DataSiswa.query()
+            .whereIn('nisn', siswaArray)
+            .preload('user')
+            .orderBy('nisn', 'asc');
+    }
+    async getUserIds() {
+        const siswaArray = this.getSiswaArray();
+        if (siswaArray.length === 0)
+            return [];
+        const siswaUsers = await DataSiswa.query().whereIn('nisn', siswaArray).select('userId');
+        return siswaUsers.map((s) => s.userId);
     }
 }
 __decorate([

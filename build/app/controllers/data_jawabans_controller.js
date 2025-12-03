@@ -10,7 +10,6 @@ import { join } from 'node:path';
 import ExcelJS from 'exceljs';
 import DataGuru from '#models/data_guru';
 import DataSiswa from '#models/data_siswa';
-import DataMapel from '#models/data_mapel';
 export default class DataJawabansController {
     async index({ request, inertia, session, auth }) {
         const page = request.input('page', 1);
@@ -127,6 +126,184 @@ export default class DataJawabansController {
             searchQuery: search,
             namaUjianFilter: namaUjian,
             listUjian,
+            auth: auth.user,
+        });
+    }
+    async distroy({ params, response, session }) {
+        try {
+            const { userId, soalId } = params;
+            const jawaban = await ManajemenKehadiran.query()
+                .where('userId', userId)
+                .andWhere('ujianId', soalId)
+                .firstOrFail();
+            if (String(jawaban.skor) == '0') {
+                const JawabanPath = jawaban.jawabanFile;
+                const filePath = join(app.makePath('storage/jawaban'), JawabanPath);
+                try {
+                    await fs.unlink(filePath);
+                }
+                catch (err) {
+                    if (err.code !== 'ENOENT') {
+                        logger.error({ err }, 'Gagal hapus file');
+                    }
+                }
+                await jawaban.delete();
+            }
+            else {
+                await jawaban.merge({
+                    skor: '0',
+                });
+            }
+            session.flash({
+                status: 'success',
+                message: 'Data Jawaban Siswa Berhasil Dihapus',
+            });
+        }
+        catch (error) {
+            logger.error({ err: error }, `Gagal hapus data siswa`);
+            session.flash({
+                status: 'error',
+                message: `Data Jawaban Siswa Gagal Dihapus ${error.message}`,
+                error: error,
+            });
+        }
+        return response.redirect().withQs().back();
+    }
+    async indexNilai({ request, inertia, session, auth }) {
+        await auth.check();
+        const page = request.input('page', 1);
+        const search = request.input('search', '');
+        const kelasId = request.input('kelas_id', '');
+        const ujianId = request.input('ujian_id', '');
+        const namaUjian = request.input('nama_ujian', '');
+        const semuaKelas = await DataKelas.query();
+        let query = ManajemenKehadiran.query()
+            .preload('user', (user) => {
+            user.preload('dataSiswa');
+        })
+            .preload('ujian', (u) => {
+            u.preload('mapel');
+        });
+        let userIdsFromKelas = [];
+        if (kelasId) {
+            const kelas = await DataKelas.find(kelasId);
+            if (kelas) {
+                const siswaArray = kelas.getSiswaArray();
+                if (siswaArray.length > 0) {
+                    const siswaUsers = await DataSiswa.query().whereIn('nisn', siswaArray).select('userId');
+                    userIdsFromKelas = siswaUsers.map((s) => s.userId);
+                    if (userIdsFromKelas.length > 0) {
+                        query.whereIn('userId', userIdsFromKelas);
+                    }
+                    else {
+                        query.where('userId', 'no-user-found');
+                    }
+                }
+            }
+        }
+        if (ujianId) {
+            query.where('ujianId', ujianId);
+        }
+        else if (namaUjian) {
+            query.whereHas('ujian', (ujianQuery) => {
+                ujianQuery.where('id', `${namaUjian}`);
+            });
+        }
+        if (search) {
+            query.whereHas('user', (userQuery) => {
+                userQuery.where('full_name', 'LIKE', `%${search}%`);
+            });
+        }
+        let listUjian = [];
+        if (kelasId) {
+            const kelas = await DataKelas.find(kelasId);
+            if (kelas) {
+                listUjian = await BankSoal.query()
+                    .where('jenjang', kelas.jenjang)
+                    .preload('mapel')
+                    .orderBy('namaUjian', 'asc');
+            }
+        }
+        else {
+            listUjian = await BankSoal.query().preload('mapel').orderBy('namaUjian', 'asc');
+        }
+        let selectedUjian = null;
+        if (ujianId) {
+            selectedUjian = await BankSoal.query().where('id', ujianId).preload('mapel').first();
+        }
+        const kehadiranPaginate = await query.orderBy('created_at', 'desc').paginate(page, 15);
+        const kehadiransWithStats = await Promise.all(kehadiranPaginate.all().map(async (kehadiran) => {
+            const kehadiranData = kehadiran.toJSON();
+            try {
+                const bankSoal = await BankSoal.find(kehadiran.ujianId);
+                let totalSoal = 0;
+                let terjawab = 0;
+                if (bankSoal && bankSoal.soalFile) {
+                    const soalFilePath = join(app.makePath('storage/soal_files'), bankSoal.soalFile);
+                    const encryptedSoalContent = await readFile(soalFilePath, 'utf-8');
+                    const decryptedSoalContent = encryption.decrypt(encryptedSoalContent);
+                    const soalArray = typeof decryptedSoalContent === 'string'
+                        ? JSON.parse(decryptedSoalContent)
+                        : decryptedSoalContent;
+                    totalSoal = soalArray.filter((item) => item.selected && item.selected == true).length;
+                    if (kehadiran.jawabanFile) {
+                        const jawabanFilePath = join(app.makePath('storage/jawaban'), kehadiran.jawabanFile);
+                        const encryptedJawabanContent = await readFile(jawabanFilePath, 'utf-8');
+                        const decryptedJawabanContent = encryption.decrypt(encryptedJawabanContent);
+                        const jawabanArray = typeof decryptedJawabanContent === 'string'
+                            ? JSON.parse(decryptedJawabanContent)
+                            : decryptedJawabanContent;
+                        if (Array.isArray(jawabanArray)) {
+                            terjawab = jawabanArray.filter((jawaban) => jawaban.jawaban && jawaban.jawaban.trim() !== '').length;
+                        }
+                        else if (typeof jawabanArray === 'object' && jawabanArray !== null) {
+                            const jawabanObj = Array.isArray(jawabanArray) ? jawabanArray[0] : jawabanArray;
+                            terjawab = Object.values(jawabanObj).filter((j) => j && j.trim() !== '').length;
+                        }
+                    }
+                }
+                return {
+                    ...kehadiranData,
+                    totalSoal,
+                    terjawab,
+                    tidakTerjawab: totalSoal - terjawab,
+                    nilai: kehadiran.skor,
+                    status: kehadiran.skor && parseInt(kehadiran.skor) > 0 ? 'Selesai' : 'Belum Selesai',
+                };
+            }
+            catch (error) {
+                logger.error({ err: error }, `Error processing kehadiran ${kehadiran.id}`);
+                return {
+                    ...kehadiranData,
+                    totalSoal: 0,
+                    terjawab: 0,
+                    tidakTerjawab: 0,
+                    nilai: 0,
+                    status: 'Error',
+                };
+            }
+        }));
+        return inertia.render('Nilai/Index', {
+            kehadiranPaginate: {
+                currentPage: kehadiranPaginate.currentPage,
+                lastPage: kehadiranPaginate.lastPage,
+                total: kehadiranPaginate.total,
+                perPage: kehadiranPaginate.perPage,
+                firstPage: 1,
+                nextPage: kehadiranPaginate.currentPage < kehadiranPaginate.lastPage
+                    ? kehadiranPaginate.currentPage + 1
+                    : null,
+                previousPage: kehadiranPaginate.currentPage > 1 ? kehadiranPaginate.currentPage - 1 : null,
+            },
+            kehadirans: kehadiransWithStats,
+            semuaKelas,
+            listUjian,
+            selectedUjian,
+            session: session.flashMessages.all(),
+            searchQuery: search,
+            kelasFilter: kelasId,
+            ujianFilter: ujianId,
+            namaUjianFilter: namaUjian,
             auth: auth.user,
         });
     }
@@ -404,42 +581,70 @@ export default class DataJawabansController {
     }
     async export({ response, request, auth, session }) {
         await auth.check();
-        const user = auth.user;
-        console.log(user);
-        const { mapel: mapelId } = request.qs();
-        if (!mapelId) {
+        const { kelas: kelasId, ujian: ujianId, mapel: mapelId } = request.qs();
+        if (!mapelId && !ujianId && !kelasId) {
             session.flash({
                 status: 'error',
-                message: 'Silakan pilih mata pelajaran terlebih dahulu',
+                message: 'Silakan pilih filter terlebih dahulu',
             });
             return response.redirect().back();
         }
         const query = ManajemenKehadiran.query()
             .preload('user', (q) => q.preload('dataSiswa'))
             .preload('ujian', (q) => q.preload('mapel'));
-        query.whereHas('ujian', (ujianQuery) => {
-            ujianQuery.whereHas('mapel', (mapelQuery) => {
-                mapelQuery.where('namaMataPelajaran', mapelId);
+        if (kelasId) {
+            const kelas = await DataKelas.find(kelasId);
+            if (kelas) {
+                const userIds = await kelas.getUserIds();
+                if (userIds.length > 0) {
+                    query.whereIn('userId', userIds);
+                }
+            }
+        }
+        if (ujianId) {
+            query.where('ujianId', ujianId);
+        }
+        if (mapelId) {
+            query.whereHas('ujian', (ujianQuery) => {
+                ujianQuery.whereHas('mapel', (mapelQuery) => {
+                    mapelQuery.where('namaMataPelajaran', mapelId);
+                });
             });
-        });
+        }
         const data = await query;
-        const mapelData = await DataMapel.query()
-            .where('namaMataPelajaran', 'LIKE', mapelId)
-            .firstOrFail();
-        const mapelName = mapelData?.namaMataPelajaran || 'unknown';
+        let fileName = 'rapor_nilai';
+        if (kelasId) {
+            const kelas = await DataKelas.find(kelasId);
+            fileName += `_${kelas?.namaKelas || 'kelas'}`;
+        }
+        if (ujianId) {
+            const ujian = await BankSoal.find(ujianId);
+            fileName += `_${ujian?.namaUjian || 'ujian'}`;
+        }
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('Rapor Nilai');
         worksheet.columns = [
-            { header: 'Nama Siswa', key: 'nama', width: 25 },
+            { header: 'No', key: 'no', width: 5 },
             { header: 'NISN', key: 'nisn', width: 15 },
-            { header: 'Mata Pelajaran', key: 'mapel', width: 25 },
+            { header: 'Nama Siswa', key: 'nama', width: 25 },
+            { header: 'Kelas', key: 'kelas', width: 15 },
+            { header: 'Mata Pelajaran', key: 'mapel', width: 20 },
+            { header: 'Ujian', key: 'ujian', width: 25 },
             { header: 'Nilai', key: 'nilai', width: 10 },
             { header: 'Predikat', key: 'predikat', width: 12 },
+            { header: 'Tanggal', key: 'tanggal', width: 15 },
         ];
+        let rowNumber = 1;
         for (const item of data) {
             const nama = item.user?.fullName ?? '-';
             const nisn = item.user?.dataSiswa?.nisn ?? '-';
             const mapel = item.ujian?.mapel?.namaMataPelajaran ?? '-';
+            const ujian = item.ujian?.namaUjian ?? '-';
+            let kelas = '-';
+            if (kelasId) {
+                const kelasData = await DataKelas.find(kelasId);
+                kelas = kelasData?.namaKelas ?? '-';
+            }
             let nilai = 0;
             try {
                 nilai = parseInt(item.skor);
@@ -448,12 +653,29 @@ export default class DataJawabansController {
                 nilai = 0;
             }
             const predikat = nilai >= 90 ? 'A' : nilai >= 80 ? 'B' : nilai >= 70 ? 'C' : nilai >= 60 ? 'D' : 'E';
-            worksheet.addRow({ nama, nisn, mapel, nilai, predikat });
+            worksheet.addRow({
+                no: rowNumber++,
+                nisn,
+                nama,
+                kelas,
+                mapel,
+                ujian,
+                nilai,
+                predikat,
+                tanggal: item.createdAt.toFormat('dd/MM/yyyy'),
+            });
         }
-        worksheet.getRow(1).font = { bold: true };
-        worksheet.getRow(1).alignment = { horizontal: 'center' };
+        const headerRow = worksheet.getRow(1);
+        headerRow.font = { bold: true };
+        headerRow.alignment = { horizontal: 'center' };
+        headerRow.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FF6D28D9' },
+        };
+        headerRow.font = { color: { argb: 'FFFFFFFF' }, bold: true };
         response.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        response.header('Content-Disposition', `attachment; filename="rapor_${mapelName}_${DateTime.now().toFormat('yyyyLLdd_HHmm')}.xlsx"`);
+        response.header('Content-Disposition', `attachment; filename="${fileName}_${DateTime.now().toFormat('yyyyLLdd_HHmm')}.xlsx"`);
         const buffer = await workbook.xlsx.writeBuffer();
         return response.send(buffer);
     }

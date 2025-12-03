@@ -1,5 +1,5 @@
 // resources/js/Pages/BankSoal/EditSoal.tsx
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Link, router, usePage } from '@inertiajs/react'
 import { Notification } from '~/Components/Notification'
 import SuperAdminLayout from '~/Layouts/SuperAdminLayouts'
@@ -13,6 +13,20 @@ import UniversalInput from '~/Components/UniversalInput'
 interface EditSoalProps {
   bankSoal: BankSoal
   soalContent: SoalItem[]
+}
+
+// Interface untuk data preview dari Excel
+interface SoalPreview {
+  id: number
+  soal: string
+  jawaban: {
+    A: { text: string; isCorrect: boolean }
+    B: { text: string; isCorrect: boolean }
+    C: { text: string; isCorrect: boolean }
+    D: { text: string; isCorrect: boolean }
+    E: { text: string; isCorrect: boolean }
+  }
+  kunci: string
 }
 
 export default function EditSoal({ bankSoal, soalContent }: EditSoalProps) {
@@ -33,6 +47,13 @@ export default function EditSoal({ bankSoal, soalContent }: EditSoalProps) {
   const [isStorageSupported, setIsStorageSupported] = useState(false)
   const [pendingCount, setPendingCount] = useState(0)
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'success' | 'error'>('idle')
+
+  // State untuk import Excel
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [excelFile, setExcelFile] = useState<File | null>(null)
+  const [previewData, setPreviewData] = useState<SoalPreview[]>([])
+  const [importLoading, setImportLoading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Input khusus di atas (untuk edit soal)
   const [editingSoal, setEditingSoal] = useState<SoalItem | null>(null)
@@ -63,6 +84,7 @@ export default function EditSoal({ bankSoal, soalContent }: EditSoalProps) {
       window.removeEventListener('offline', handleOffline)
     }
   }, [])
+
   useEffect(() => {
     const soals = soalContent.map((item) => ({
       ...item,
@@ -107,7 +129,121 @@ export default function EditSoal({ bankSoal, soalContent }: EditSoalProps) {
     }
   }
 
-  // Fungsi untuk edit soal
+  // ========== FUNGSI IMPORT EXCEL ==========
+  const handleFileUpload = async (file: File) => {
+    if (!file) return
+
+    const formData = new FormData()
+    formData.append('excel_file', file)
+    formData.append('bank_soal_id', bankSoal.id.toString())
+
+    try {
+      setImportLoading(true)
+      const response = await fetch(`/api/import-excel-preview`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-CSRF-TOKEN':
+            document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        console.log(data)
+
+        if (data.success) {
+          setPreviewData(data.data)
+          setExcelFile(file)
+          notify(`Berhasil membaca ${data.data.length} soal dari Excel`)
+        } else {
+          notify('Gagal membaca file: ' + data.message, 'error')
+        }
+      } else {
+        notify('Terjadi kesalahan saat membaca file', 'error')
+      }
+    } catch (error) {
+      console.error('Error:', error)
+      notify('Terjadi kesalahan saat memproses file', 'error')
+    } finally {
+      setImportLoading(false)
+    }
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      handleFileUpload(file)
+    }
+  }
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    const file = e.dataTransfer.files[0]
+    if (file && (file.name.endsWith('.xlsx') || file.name.endsWith('.xls'))) {
+      handleFileUpload(file)
+    }
+  }
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+  }
+
+  // Fungsi untuk mengkonfirmasi import
+  const confirmImport = async () => {
+    if (!excelFile || previewData.length === 0) {
+      notify('Silahkan upload file Excel terlebih dahulu', 'error')
+      return
+    }
+
+    try {
+      setImportLoading(true)
+
+      // Konversi preview data ke format SoalItem
+      const soalItems: SoalItem[] = previewData.map((soal, index) => ({
+        id: soal.id || Math.floor(Math.random() * 1000) + 1000,
+        soal: soal.soal,
+        A: soal.jawaban.A.text,
+        B: soal.jawaban.B.text,
+        C: soal.jawaban.C.text,
+        D: soal.jawaban.D.text,
+        E: soal.jawaban.E.text,
+        kunci: soal.kunci as 'A' | 'B' | 'C' | 'D' | 'E',
+        syncStatus: 'unsaved' as const,
+        tempId: `import-${Date.now()}-${index}`,
+      }))
+
+      // Tambahkan ke state soals
+      const updatedSoals = [...soals, ...soalItems]
+      setSoals(updatedSoals)
+
+      // Simpan ke server
+      await saveToServer(updatedSoals)
+
+      notify(`Berhasil mengimpor ${soalItems.length} soal dari Excel`, 'success')
+      setShowImportModal(false)
+      resetImportForm()
+    } catch (error) {
+      console.error('Error importing:', error)
+      notify('Gagal mengimpor soal dari Excel', 'error')
+    } finally {
+      setImportLoading(false)
+    }
+  }
+
+  const resetImportForm = () => {
+    setExcelFile(null)
+    setPreviewData([])
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
+  const formatHTMLPreview = (html: string) => {
+    return { __html: html }
+  }
+
+  // ========== FUNGSI LAINNYA (SAMA) ==========
   const startEditSoal = (soal: SoalItem, index: number) => {
     setEditingSoal({ ...soal, tempId: `edit-${index}` })
     setQuickSoal({
@@ -208,6 +344,7 @@ export default function EditSoal({ bankSoal, soalContent }: EditSoalProps) {
       console.error(error)
     }
   }
+
   useEffect(() => {
     if (isOnline && isStorageSupported && pendingCount > 0) {
       syncPendingData()
@@ -391,8 +528,6 @@ export default function EditSoal({ bankSoal, soalContent }: EditSoalProps) {
     }
   }
 
-  console.log(quickSoal)
-
   return (
     <div className="max-w-7xl mx-auto lg:p-6">
       <Notification />
@@ -425,6 +560,22 @@ export default function EditSoal({ bankSoal, soalContent }: EditSoalProps) {
             {isOnline ? 'Online' : 'Offline'}
           </div>
 
+          {/* Tombol Import Excel */}
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center space-x-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"
+              />
+            </svg>
+            <span>Import Excel</span>
+          </button>
+
           <Link
             href={url}
             className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600"
@@ -441,6 +592,233 @@ export default function EditSoal({ bankSoal, soalContent }: EditSoalProps) {
           ) : null}
         </div>
       </div>
+
+      {/* Modal Import Excel */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white dark:bg-gray-800">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                Import Soal dari Excel
+              </h3>
+              <button
+                onClick={() => {
+                  setShowImportModal(false)
+                  resetImportForm()
+                }}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <span className="text-2xl">×</span>
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              {/* Upload Area */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Upload File Excel
+                </label>
+                <div
+                  className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+                    excelFile
+                      ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                      : 'border-gray-300 hover:border-gray-400 dark:border-gray-600 dark:hover:border-gray-500'
+                  }`}
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    accept=".xlsx,.xls"
+                    className="hidden"
+                  />
+                  {importLoading ? (
+                    <div className="flex flex-col items-center">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+                      <p className="text-gray-600 dark:text-gray-400">Memproses file...</p>
+                    </div>
+                  ) : excelFile ? (
+                    <div className="flex flex-col items-center">
+                      <svg
+                        className="w-12 h-12 text-green-500 mb-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      <p className="text-gray-700 dark:text-gray-300 font-medium mb-2">
+                        {excelFile.name}
+                      </p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {previewData.length} soal berhasil dibaca
+                      </p>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setExcelFile(null)
+                          setPreviewData([])
+                          if (fileInputRef.current) fileInputRef.current.value = ''
+                        }}
+                        className="mt-2 text-sm text-red-600 hover:text-red-800"
+                      >
+                        Hapus file
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center">
+                      <svg
+                        className="w-12 h-12 text-gray-400 mb-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                        />
+                      </svg>
+                      <p className="text-gray-700 dark:text-gray-300 font-medium mb-2">
+                        Klik untuk upload atau drop file Excel di sini
+                      </p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Format .xlsx atau .xls (Maks. 10MB)
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Preview Soal */}
+              {previewData.length > 0 && (
+                <>
+                  <div>
+                    <div className="flex justify-between items-center mb-4">
+                      <h4 className="text-lg font-medium text-gray-900 dark:text-white">
+                        Preview Soal ({previewData.length} soal)
+                      </h4>
+                      <span className="text-sm text-gray-500">
+                        Kunci jawaban ditandai dengan <span className="text-green-600">✓</span>
+                      </span>
+                    </div>
+
+                    <div className="border rounded-lg overflow-hidden max-h-96 overflow-y-auto">
+                      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
+                          <tr>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                              No
+                            </th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                              Soal
+                            </th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                              Jawaban Benar
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                          {previewData.map((soal, index) => (
+                            <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                              <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                                {index + 1}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-900 dark:text-white max-w-xs">
+                                <div
+                                  className="line-clamp-3 prose prose-sm max-w-none dark:prose-invert"
+                                  dangerouslySetInnerHTML={formatHTMLPreview(soal.soal)}
+                                />
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="space-y-1">
+                                  {Object.entries(soal.jawaban).map(
+                                    ([key, jawaban]) =>
+                                      jawaban.isCorrect &&
+                                      jawaban.text !== '-' && (
+                                        <div
+                                          key={key}
+                                          className="flex items-center p-2 rounded bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800"
+                                        >
+                                          <span className="font-medium mr-2 dark:text-white">
+                                            {key}.
+                                          </span>
+                                          <div
+                                            className="flex-1 dark:text-white prose prose-sm max-w-none dark:prose-invert line-clamp-2"
+                                            dangerouslySetInnerHTML={formatHTMLPreview(
+                                              jawaban.text
+                                            )}
+                                          />
+                                          <span className="ml-2 text-green-600">✓</span>
+                                        </div>
+                                      )
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex justify-end space-x-3 pt-4 border-t">
+                    <button
+                      onClick={() => {
+                        setShowImportModal(false)
+                        resetImportForm()
+                      }}
+                      className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                      disabled={importLoading}
+                    >
+                      Batal
+                    </button>
+                    <button
+                      onClick={confirmImport}
+                      disabled={importLoading}
+                      className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                    >
+                      {importLoading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                          <span>Mengimpor...</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                          <span>Import {previewData.length} Soal</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Input Cepat di Atas (Fixed) - Untuk Edit dan Tambah Soal */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6 top-4 z-10 border-2 border-purple-200">
@@ -545,7 +923,8 @@ export default function EditSoal({ bankSoal, soalContent }: EditSoalProps) {
 
         {soals?.length === 0 ? (
           <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-            Belum ada soal. Gunakan form di atas untuk menambahkan soal pertama.
+            Belum ada soal. Gunakan form di atas untuk menambahkan soal pertama atau import dari
+            Excel.
           </div>
         ) : (
           <div className="space-y-3">
@@ -603,7 +982,7 @@ function SoalListItem({
     switch (status) {
       case 'synced':
         return 'Tersimpan'
-      case 'pending':
+      case 'unsaved':
         return 'Belum Tersimpan'
       default:
         return status

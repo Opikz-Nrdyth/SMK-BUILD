@@ -150,6 +150,10 @@ router
         .as('superadmin.bankSoal.updateSoal')
 
       router
+        .put('bank-soal/importExcell', [BankSoalsController, 'importFromExcel'])
+        .as('superadmin.bankSoal.excell')
+
+      router
         .resource('bank-soal/data-password', DataPasswordsController)
         .only(['index', 'store', 'update', 'destroy'])
         .as('superadmin.dataPassword')
@@ -160,6 +164,8 @@ router
       router
         .get('/manajemen-kehadiran', [DataJawabansController, 'index'])
         .as('superadmin.kehadiran')
+
+      router.delete('manajemen-kehadiran/:userId/:soalId', [DataJawabansController, 'distroy'])
       router
         .get('/manajemen-kehadiran/ujian', [DataJawabansController, 'ujian'])
         .as('superadmin.kehadiran.ujian')
@@ -272,7 +278,7 @@ router
 
     // ===============================================LAPORAN NILAI===============================================
     router.group(() => {
-      router.get('/laporan-nilai', [DataJawabansController, 'index']).as('superadmin.nilai')
+      router.get('/laporan-nilai', [DataJawabansController, 'indexNilai']).as('superadmin.nilai')
       router
         .get('/laporan-nilai/cetak', [DataJawabansController, 'export'])
         .as('superadmin.nilai.cetak')

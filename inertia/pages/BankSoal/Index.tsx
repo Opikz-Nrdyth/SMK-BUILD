@@ -16,7 +16,7 @@ interface IndexProps {
 }
 
 export default function Index({ bankSoals, bankSoalPaginate, searchQuery = '', auth }: IndexProps) {
-  const { props } = usePage()
+  const { props } = usePage() as any
 
   const [data, setData] = useState([])
   const [dataSelected, setDataSelected] = useState<any | null>()
@@ -26,10 +26,12 @@ export default function Index({ bankSoals, bankSoalPaginate, searchQuery = '', a
 
   const urlPage = props.pattern
 
+  console.log(bankSoals)
+
   useEffect(() => {
     if (!bankSoals) return
 
-    const newData = [] as any
+    let newData = [] as any
     bankSoals.map((item: BankSoal) => {
       newData.push({
         ...item,
@@ -39,6 +41,17 @@ export default function Index({ bankSoals, bankSoalPaginate, searchQuery = '', a
         mapel: item.mapelDetails?.join(', ') || '-',
         kode: item.kode || '-',
       })
+    })
+
+    newData.sort((a: any, b: any) => {
+      const dateA = new Date(a.tanggalUjian).getTime()
+      const dateB = new Date(b.tanggalUjian).getTime()
+
+      // 1. Sort tanggal terbaru dulu
+      if (dateB !== dateA) return dateB - dateA
+
+      // 2. Jika tanggal sama, sort jenjang dari 10 → 11 → 12
+      return Number(a.jenjang) - Number(b.jenjang)
     })
     setData(newData)
   }, [bankSoals])
@@ -82,12 +95,14 @@ export default function Index({ bankSoals, bankSoalPaginate, searchQuery = '', a
           >
             Tambah Bank Soal
           </Link>
-          <Link
-            href={`${urlPage}/data-password`}
-            className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
-          >
-            Data Password
-          </Link>
+          {props.auth.role == 'SuperAdmin' && (
+            <Link
+              href={`${urlPage}/data-password`}
+              className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
+            >
+              Data Password
+            </Link>
+          )}
         </div>
       </div>
 

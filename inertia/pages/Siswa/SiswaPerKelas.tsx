@@ -6,6 +6,7 @@ import { Siswa } from '../Siswa/types'
 import ModalView from '~/Components/ModalView'
 import SuperAdminLayout from '~/Layouts/SuperAdminLayouts'
 import StafLayout from '~/Layouts/StafLayouts'
+import UniversalInput from '~/Components/UniversalInput'
 
 interface Kelas {
   namaKelas: string
@@ -29,13 +30,14 @@ export default function SiswaPerKelas({
   searchQuery?: string
 }) {
   const { props } = usePage()
-  const [data, setData] = useState([])
+  const [data, setData] = useState<any>([])
   const [dataSelected, setDataSelected] = useState<any | null>(null)
   const [currentPage, setCurrentPage] = useState(siswaPaginate?.currentPage || 1)
   const [lastPage, setLastPage] = useState(siswaPaginate?.lastPage || 1)
   const [search, setSearch] = useState(searchQuery)
   const [selectedKelasState, setSelectedKelasState] = useState(selectedKelas)
   const [cardKelas, setCardKelas] = useState(false)
+  const [searchKelas, setSearchKelas] = useState('')
 
   useEffect(() => {
     if (!siswas) return
@@ -48,7 +50,7 @@ export default function SiswaPerKelas({
     setData(newData)
   }, [siswas])
 
-  const baseRoute = props.pattern
+  const baseRoute = props.pattern! as any
 
   const handleSelectKelas = (kelasName: string) => {
     setSelectedKelasState(kelasName)
@@ -96,6 +98,47 @@ export default function SiswaPerKelas({
 
   const path = String(props.pattern).split('/')
 
+  const normalizeNamaKelas = (nama: any) => {
+    const [tingkat, jurusan, nomor] = nama.split('-')
+
+    const tingkatMap = { X: 1, XI: 2, XII: 3 } as any
+
+    return {
+      tingkatNum: tingkatMap[tingkat] || 99,
+      tingkat,
+      jurusan,
+      nomor: parseInt(nomor),
+      original: nama,
+    }
+  }
+
+  const getSortedKelas = (list: any) => {
+    return [...list].sort((a, b) => {
+      const A = normalizeNamaKelas(a.namaKelas)
+      const B = normalizeNamaKelas(b.namaKelas)
+
+      if (A.tingkatNum !== B.tingkatNum) {
+        return A.tingkatNum - B.tingkatNum
+      }
+
+      if (A.jurusan !== B.jurusan) {
+        return A.jurusan.localeCompare(B.jurusan)
+      }
+
+      return A.nomor - B.nomor
+    })
+  }
+
+  const getFilteredKelas = (kelasList: any, searchKelas: any) => {
+    const sorted = getSortedKelas(kelasList)
+
+    if (!searchKelas) return sorted
+
+    return sorted.filter((item) => item.namaKelas.toLowerCase().includes(searchKelas.toLowerCase()))
+  }
+
+  const sortedKelas = getFilteredKelas(kelasList, searchKelas)
+
   return (
     <div className="max-w-7xl mx-auto lg:p-6">
       <Notification />
@@ -138,49 +181,65 @@ export default function SiswaPerKelas({
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {cardKelas &&
-            kelasList.map((kelas) => (
-              <div
-                key={kelas.namaKelas}
-                className={`bg-white dark:bg-gray-800 rounded-lg shadow border p-4 cursor-pointer transition-all duration-200 ${
-                  selectedKelasState === kelas.namaKelas
-                    ? 'border-blue-500 ring-2 ring-blue-200 dark:ring-blue-800'
-                    : 'border-gray-200 dark:border-gray-700 hover:shadow-md'
-                }`}
-                onClick={() => handleSelectKelas(kelas.namaKelas)}
-              >
-                <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-gray-900 dark:text-white">{kelas.namaKelas}</h3>
-                  <div className="text-lg">🏫</div>
-                </div>
-
-                <div className="mt-2">
-                  <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {kelas.jumlahSiswa}
-                  </div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">Siswa</div>
-                </div>
-                <div className="text-sm text-gray-700 dark:text-gray-100 mt-2 flex flex-col">
-                  Wali Kelas:{' '}
-                  <span className="bg-yellow-600 rounded-full px-2 py-1 text-white text-nowrap text-xs">
-                    {kelas.waliKelas}
-                  </span>
-                </div>
-
-                <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+        <div className="">
+          {cardKelas && (
+            <div>
+              <UniversalInput
+                name="searchKelas"
+                value={searchKelas}
+                placeholder="Cari Kelas"
+                onChange={(value) => {
+                  setSearchKelas(value)
+                }}
+                type="text"
+              />
+              <div className="mt-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {sortedKelas.map((kelas) => (
                   <div
-                    className={`text-sm font-medium ${
+                    key={kelas.namaKelas}
+                    className={`bg-white dark:bg-gray-800 rounded-lg shadow border p-4 cursor-pointer transition-all duration-200 ${
                       selectedKelasState === kelas.namaKelas
-                        ? 'text-blue-600 dark:text-blue-400'
-                        : 'text-gray-600 dark:text-gray-400'
+                        ? 'border-blue-500 ring-2 ring-blue-200 dark:ring-blue-800'
+                        : 'border-gray-200 dark:border-gray-700 hover:shadow-md'
                     }`}
+                    onClick={() => handleSelectKelas(kelas.namaKelas)}
                   >
-                    {selectedKelasState === kelas.namaKelas ? '✓ Sedang dipilih' : 'Pilih kelas →'}
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-bold text-gray-900 dark:text-white">{kelas.namaKelas}</h3>
+                      <div className="text-lg">🏫</div>
+                    </div>
+
+                    <div className="mt-2">
+                      <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                        {kelas.jumlahSiswa}
+                      </div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">Siswa</div>
+                    </div>
+                    <div className="text-sm text-gray-700 dark:text-gray-100 mt-2 flex flex-col">
+                      Wali Kelas:{' '}
+                      <span className="bg-yellow-600 rounded-full px-2 py-1 text-white text-nowrap text-xs">
+                        {kelas.waliKelas}
+                      </span>
+                    </div>
+
+                    <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                      <div
+                        className={`text-sm font-medium ${
+                          selectedKelasState === kelas.namaKelas
+                            ? 'text-blue-600 dark:text-blue-400'
+                            : 'text-gray-600 dark:text-gray-400'
+                        }`}
+                      >
+                        {selectedKelasState === kelas.namaKelas
+                          ? '✓ Sedang dipilih'
+                          : 'Pilih kelas →'}
+                      </div>
+                    </div>
                   </div>
-                </div>
+                ))}
               </div>
-            ))}
+            </div>
+          )}
         </div>
 
         {/* Empty State */}

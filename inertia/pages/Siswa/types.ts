@@ -5,36 +5,36 @@ export interface User {
 }
 
 export interface Siswa {
-  id: number
-  userId: number
-  nisn: string
+  id?: number
+  userId?: number
+  nisn?: string
   nik?: string | null
-  noAktaLahir: string
+  noAktaLahir?: string
   noKk?: string | null
-  jenisKelamin: 'Laki-laki' | 'Perempuan'
-  tempatLahir: string
-  tanggalLahir: string
-  agama: string
-  kewarganegaraan: 'WNI' | 'WNA'
-  alamat: string
-  rt: string
-  rw: string
+  jenisKelamin?: 'Laki-laki' | 'Perempuan'
+  tempatLahir?: string
+  tanggalLahir?: string
+  agama?: string
+  kewarganegaraan?: 'WNI' | 'WNA'
+  alamat?: string
+  rt?: string
+  rw?: string
   dusun?: string | null
   kelurahan?: string | null
-  kecamatan: string
-  kodePos: string
-  jenisTinggal: string
+  kecamatan?: string
+  kodePos?: string
+  jenisTinggal?: string
   transportasi?: string | null
-  noTelepon: string
-  anakKe: string
-  jumlahSaudara: string
-  penerimaKip: 'Iya' | 'Tidak'
+  noTelepon?: string
+  anakKe?: string
+  jumlahSaudara?: string
+  penerimaKip?: 'Iya' | 'Tidak'
   beratBadan?: string | null
   tinggiBadan?: string | null
   lingkarKepala?: string | null
   jarakSekolah?: string | null
   waktuTempuh?: string | null
-  jenisKesejahteraan:
+  jenisKesejahteraan?:
     | 'PROGRAM KELUARGA HARAPAN'
     | 'KARTU INDONESIA PINTAR'
     | 'KARTU PERLINDUNGAN SOSIAL'
@@ -43,8 +43,8 @@ export interface Siswa {
     | 'TIDAK ADA'
   nomorKartu?: string | null
   namaDiKartu?: string | null
-  jenisPendaftaran: 'SISWA BARU' | 'PINDAHAN' | 'KEMBALI BERSEKOLAH'
-  sekolahAsal: string
+  jenisPendaftaran?: 'SISWA BARU' | 'PINDAHAN' | 'KEMBALI BERSEKOLAH'
+  sekolahAsal?: string
   npsn?: string | null
   sekolahAsalPindahan?: string | null
   suratKeteranganPindah?: string | null
@@ -55,9 +55,9 @@ export interface Siswa {
   fileKk?: string | null
   fileIjazah?: string | null
   fileFoto?: string | null
-  createdAt: string
-  updatedAt: string | null
-  user: User
+  createdAt?: string
+  updatedAt?: string | null
+  user?: User
   dataWalis?: Wali[]
   nama_kelas?: string
   jenis_kelas?: 'diampu' | 'wali'

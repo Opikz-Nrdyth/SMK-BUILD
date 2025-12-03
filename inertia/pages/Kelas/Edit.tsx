@@ -24,7 +24,19 @@ export default function Edit({ kelas, guruWithMapel, dataSiswa, semuaMapel }: an
 
   const { props } = usePage()
   const pattern = (props?.pattern as string).split('/').filter((item: any) => item != '')
-  const url = `/${pattern[0]}/${pattern[1]}`
+
+  let baseUrl = `/${pattern[0]}/${pattern[1]}`
+
+  // Buat query object
+  const params = new URLSearchParams()
+
+  // Tambahkan query page jika ada
+  if (props?.page) {
+    params.set('page', props.page as string)
+  }
+
+  // Gabungkan final URL
+  const url = params.toString() ? `${baseUrl}?${params.toString()}` : baseUrl
 
   const guru = useMemo(() => {
     if (!guruWithMapel) return []

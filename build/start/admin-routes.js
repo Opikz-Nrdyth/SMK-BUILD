@@ -96,8 +96,11 @@ router
             router
                 .put('bank-soal/:id/update-soal', [BankSoalsController, 'updateSoal'])
                 .as('staf.bankSoal.updateSoal');
+            router
+                .put('bank-soal/importExcell', [BankSoalsController, 'importFromExcel'])
+                .as('staf.bankSoal.excell');
         });
-        router.get('/laporan-nilai', [DataJawabansController, 'index']).as('staf.nilai');
+        router.get('/laporan-nilai', [DataJawabansController, 'indexNilai']).as('staf.nilai');
         router.group(() => {
             router.get('/partisipasi-ujian', [DataPembayaranController, 'partisipasiUjian']);
             router.post('/partisipasi-ujian/update-partisipasi-ujian', [

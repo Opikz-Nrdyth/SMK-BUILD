@@ -41,6 +41,10 @@ router
         .put('bank-soal/:id/update-soal', [BankSoalsController, 'updateSoal'])
         .as('guru.bankSoal.updateSoal')
 
+      router
+        .put('bank-soal/importExcell', [BankSoalsController, 'importFromExcel'])
+        .as('guru.bankSoal.excell')
+
       router.get('/manajemen-kehadiran', [DataJawabansController, 'index']).as('guru.kehadiran')
 
       router
@@ -50,7 +54,7 @@ router
 
     // ===============================================MANAJEMEN NILAI===============================================
     router.group(() => {
-      router.get('/laporan-nilai', [DataJawabansController, 'index']).as('guru.nilai')
+      router.get('/laporan-nilai', [DataJawabansController, 'indexNilai']).as('guru.nilai')
 
       router.get('/laporan-nilai/cetak', [DataJawabansController, 'export']).as('guru.nilai.cetak')
 

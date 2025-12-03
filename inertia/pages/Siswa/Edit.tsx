@@ -9,8 +9,8 @@ import { useNotification } from '~/Components/NotificationAlert'
 export default function SiswaEdit({ siswa }: { siswa: Siswa }) {
   const initialValues: SiswaFormData = {
     user: {
-      fullName: siswa.user.fullName,
-      email: siswa.user.email,
+      fullName: siswa.user!.fullName,
+      email: siswa.user!.email,
     },
     siswa: {
       nisn: siswa.nisn,
@@ -60,6 +60,7 @@ export default function SiswaEdit({ siswa }: { siswa: Siswa }) {
   }
 
   const { props } = usePage()
+
   const pattern = (props?.pattern as string).split('/').filter((item: any) => item != '')
 
   const { notify } = useNotification()

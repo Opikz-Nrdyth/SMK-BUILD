@@ -80,7 +80,7 @@ export default function Index({ dataPasswords, bankSoals, pagination, searchQuer
       {/* Modal Tambah */}
       {showModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg p-6 relative transition duration-200">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-[80%] p-6 relative transition duration-200">
             <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">
               Tambah Data Password
             </h2>

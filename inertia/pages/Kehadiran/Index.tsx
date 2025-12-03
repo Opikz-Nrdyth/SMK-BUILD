@@ -86,6 +86,8 @@ export default function Index({
     setData(newData)
   }, [kehadirans])
 
+  console.log(selectedSiswa)
+
   // Group data by jenis ujian
   const jenisUjianData = listUjian.reduce((acc: any, ujian: any) => {
     const jenis = ujian.jenisUjian || 'Tidak ada jenis'
@@ -507,13 +509,26 @@ export default function Index({
             columns={[
               { header: 'NISN', accessor: 'nisn' as const },
               { header: 'Nama Siswa', accessor: 'namaSiswa' as const },
-              { header: 'Email', accessor: 'email' as const },
-              { header: 'Skor', accessor: 'skor' as const },
               { header: 'Benar', accessor: 'benar' as const },
               { header: 'Salah', accessor: 'salah' as const },
               {
                 header: 'Status',
                 accessor: 'status' as const,
+              },
+
+              {
+                header: 'ID',
+                accessor: 'id',
+                action: (row: any) => (
+                  <button
+                    onClick={() => {
+                      router.delete(`${String(props.pattern)}/${row.id}/${row.ujianId}`)
+                    }}
+                    className="font-bold hover:underline text-red-600 cursor-pointer "
+                  >
+                    delete
+                  </button>
+                ),
               },
             ]}
             pageSize={15}

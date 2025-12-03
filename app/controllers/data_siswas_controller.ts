@@ -108,6 +108,7 @@ export default class DataSiswasController {
       siswas: siswas,
       session: session.flashMessages.all(),
       searchQuery: search,
+      page: page,
     })
   }
 

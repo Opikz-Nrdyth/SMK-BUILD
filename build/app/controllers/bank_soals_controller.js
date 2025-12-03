@@ -7,6 +7,8 @@ import User from '#models/user';
 import encryption from '@adonisjs/core/services/encryption';
 import { writeFile, mkdir, readFile } from 'fs/promises';
 import { join } from 'path';
+import { tmpdir } from 'os';
+import ExcelJS from 'exceljs';
 import app from '@adonisjs/core/services/app';
 import DataMapel from '#models/data_mapel';
 import DataKelas from '#models/data_kelas';
@@ -531,6 +533,364 @@ export default class BankSoalsController {
             });
             return response.redirect().withQs().back();
         }
+    }
+    async importFromExcel({ request, response, session, auth }) {
+        const trx = await db.transaction();
+        try {
+            await auth.check();
+            const user = auth.user;
+            const excelFile = request.file('excel_file', {
+                size: '10mb',
+                extnames: ['xlsx', 'xls'],
+            });
+            if (!excelFile) {
+                throw new Error('File Excel tidak ditemukan');
+            }
+            if (!excelFile.isValid) {
+                throw new Error(excelFile.errors[0]?.message || 'File Excel tidak valid');
+            }
+            await excelFile.move(tmpdir(), {
+                name: `import_soal_${Date.now()}_${excelFile.clientName}`,
+                overwrite: true,
+            });
+            if (!excelFile.filePath) {
+                throw new Error('Gagal menyimpan file sementara');
+            }
+            const workbook = new ExcelJS.Workbook();
+            await workbook.xlsx.readFile(excelFile.filePath);
+            const worksheet = workbook.worksheets[0];
+            if (!worksheet) {
+                throw new Error('Worksheet tidak ditemukan');
+            }
+            const soalData = [];
+            let currentSoal = null;
+            let soalCounter = 1;
+            let mulaiMembaca = false;
+            for (let rowNumber = 1; rowNumber <= worksheet.rowCount; rowNumber++) {
+                const row = worksheet.getRow(rowNumber);
+                const cellA = row.getCell(1).value?.toString()?.trim();
+                const cellB = row.getCell(2).value?.toString()?.trim();
+                const cellC = row.getCell(3).value?.toString()?.trim();
+                if (cellA === 'No' && cellB === 'Jenis' && cellC === 'Kode') {
+                    mulaiMembaca = true;
+                    continue;
+                }
+                if (!mulaiMembaca) {
+                    continue;
+                }
+                if (!cellA && !cellB && !cellC) {
+                    continue;
+                }
+                const jenis = cellB?.toUpperCase() || '';
+                const kode = cellC?.toUpperCase() || '';
+                const isi = row.getCell(4).value?.toString()?.trim() || '';
+                const statusJawaban = parseInt(row.getCell(5).value?.toString() || '0');
+                const tingkatKesulitan = parseInt(row.getCell(6).value?.toString() || '5');
+                if (!jenis || !kode) {
+                    continue;
+                }
+                if (jenis === 'SOAL' && kode === 'Q') {
+                    if (currentSoal) {
+                        soalData.push(currentSoal);
+                    }
+                    currentSoal = {
+                        id: soalCounter++,
+                        soal: this.formatToHTML(isi),
+                        jawaban: {
+                            A: { text: '-', isCorrect: false },
+                            B: { text: '-', isCorrect: false },
+                            C: { text: '-', isCorrect: false },
+                            D: { text: '-', isCorrect: false },
+                            E: { text: '-', isCorrect: false },
+                        },
+                        kunci: null,
+                        tingkatKesulitan: tingkatKesulitan,
+                    };
+                }
+                else if (jenis === 'JAWABAN' && kode === 'A' && currentSoal) {
+                    const jawabanOptions = ['A', 'B', 'C', 'D', 'E'];
+                    let pilihan = '';
+                    for (const option of jawabanOptions) {
+                        if (currentSoal.jawaban[option].text === '-') {
+                            pilihan = option;
+                            break;
+                        }
+                    }
+                    if (!pilihan) {
+                        continue;
+                    }
+                    const jawabanHTML = this.formatToHTML(isi);
+                    currentSoal.jawaban[pilihan] = {
+                        text: jawabanHTML,
+                        isCorrect: statusJawaban === 1,
+                    };
+                    if (statusJawaban === 1) {
+                        currentSoal.kunci = pilihan;
+                    }
+                }
+            }
+            if (currentSoal) {
+                soalData.push(currentSoal);
+            }
+            if (soalData.length === 0) {
+                throw new Error('Tidak ada data soal yang ditemukan dalam file Excel');
+            }
+            for (const [index, soal] of soalData.entries()) {
+                if (!soal.soal || soal.soal.trim() === '') {
+                    throw new Error(`Soal nomor ${index + 1} tidak memiliki pertanyaan`);
+                }
+                const jawabanValid = Object.values(soal.jawaban).some((j) => j.text !== '-');
+                if (!jawabanValid) {
+                    throw new Error(`Soal nomor ${index + 1} tidak memiliki jawaban yang valid`);
+                }
+                if (!soal.kunci) {
+                    throw new Error(`Soal nomor ${index + 1} tidak memiliki kunci jawaban yang benar`);
+                }
+                if (!['A', 'B', 'C', 'D', 'E'].includes(soal.kunci)) {
+                    throw new Error(`Kunci jawaban soal nomor ${index + 1} tidak valid`);
+                }
+            }
+            const payload = request.only([
+                'namaUjian',
+                'jenjang',
+                'jurusan',
+                'jenisUjian',
+                'penulis',
+                'kode',
+                'mapel',
+                'waktu',
+                'tanggalUjian',
+            ]);
+            const soalContent = soalData.map((soal) => ({
+                id: soal.id,
+                soal: soal.soal,
+                A: soal.jawaban.A.text,
+                B: soal.jawaban.B.text,
+                C: soal.jawaban.C.text,
+                D: soal.jawaban.D.text,
+                E: soal.jawaban.E.text,
+                kunci: soal.kunci,
+                selected: payload.jenisUjian === 'Ujian Mandiri'
+                    ? true
+                    : payload.jenisUjian === 'PAS' || payload.jenisUjian === 'PAT'
+                        ? false
+                        : false,
+            }));
+            const fileName = `${payload.namaUjian || 'imported-soal'}-${Date.now()}.opz`;
+            const filePath = join(app.makePath('storage/soal_files'), fileName);
+            await mkdir(app.makePath('storage/soal_files'), { recursive: true });
+            const encryptedContent = encryption.encrypt(JSON.stringify(soalContent, null, 2));
+            await writeFile(filePath, encryptedContent);
+            await BankSoal.create({
+                namaUjian: payload.namaUjian,
+                jenjang: payload.jenjang,
+                jurusan: payload.jurusan,
+                jenisUjian: payload.jenisUjian,
+                penulis: payload.penulis || [user.id],
+                kode: payload.kode,
+                mapelId: payload.mapel,
+                waktu: payload.waktu,
+                tanggalUjian: payload.tanggalUjian,
+                soalFile: fileName,
+            }, { client: trx });
+            await trx.commit();
+            session.flash({
+                status: 'success',
+                message: `Berhasil mengimpor ${soalData.length} soal dari file Excel.`,
+            });
+            return response.redirect().withQs().back();
+        }
+        catch (error) {
+            await trx.rollback();
+            logger.error({ err: error }, 'Gagal mengimpor soal dari Excel');
+            session.flash({
+                status: 'error',
+                message: 'Gagal mengimpor soal dari Excel',
+                error: error.message,
+            });
+            return response.redirect().withQs().back();
+        }
+    }
+    async previewExcelImport({ request, response }) {
+        try {
+            const excelFile = request.file('excel_file', {
+                size: '10mb',
+                extnames: ['xlsx', 'xls'],
+            });
+            if (!excelFile) {
+                return response.status(400).json({
+                    success: false,
+                    message: 'File Excel tidak ditemukan',
+                });
+            }
+            if (!excelFile.isValid) {
+                return response.status(400).json({
+                    success: false,
+                    message: excelFile.errors[0]?.message || 'File Excel tidak valid',
+                });
+            }
+            const workbook = new ExcelJS.Workbook();
+            await workbook.xlsx.readFile(excelFile.tmpPath);
+            const worksheet = workbook.worksheets[0];
+            if (!worksheet) {
+                return response.status(400).json({
+                    success: false,
+                    message: 'Worksheet tidak ditemukan',
+                });
+            }
+            const soalData = [];
+            let currentSoal = null;
+            let soalCounter = 1;
+            let mulaiMembaca = false;
+            for (let rowNumber = 1; rowNumber <= worksheet.rowCount; rowNumber++) {
+                const row = worksheet.getRow(rowNumber);
+                const cellA = row.getCell(1).value?.toString()?.trim() || '';
+                const cellB = row.getCell(2).value?.toString()?.trim() || '';
+                const cellC = row.getCell(3).value?.toString()?.trim() || '';
+                const cellD = row.getCell(4).value?.toString()?.trim() || '';
+                const cellE = row.getCell(5).value?.toString()?.trim() || '0';
+                const cellF = row.getCell(6).value?.toString()?.trim() || '5';
+                if (cellA === 'No' && cellB === 'Jenis' && cellC === 'Kode') {
+                    mulaiMembaca = true;
+                    continue;
+                }
+                if (!mulaiMembaca) {
+                    continue;
+                }
+                if (!cellA && !cellB && !cellC && !cellD) {
+                    continue;
+                }
+                const noSoal = parseInt(cellA) || 0;
+                const jenis = cellB?.toUpperCase() || '';
+                const kode = cellC?.toUpperCase() || '';
+                const isi = cellD || '';
+                const statusJawaban = parseInt(cellE) || 0;
+                const tingkatKesulitan = parseInt(cellF) || 5;
+                if (jenis === 'SOAL' && kode === 'Q') {
+                    if (currentSoal) {
+                        if (currentSoal.soal && currentSoal.soal.trim() !== '') {
+                            soalData.push(currentSoal);
+                        }
+                    }
+                    currentSoal = {
+                        id: soalCounter++,
+                        soal: this.formatSoalToHTML(isi),
+                        jawaban: {
+                            A: { text: '-', isCorrect: false },
+                            B: { text: '-', isCorrect: false },
+                            C: { text: '-', isCorrect: false },
+                            D: { text: '-', isCorrect: false },
+                            E: { text: '-', isCorrect: false },
+                        },
+                        kunci: null,
+                        tingkatKesulitan: tingkatKesulitan,
+                    };
+                }
+                else if (jenis === 'JAWABAN' && kode === 'A' && currentSoal) {
+                    const jawabanOptions = ['A', 'B', 'C', 'D', 'E'];
+                    let pilihan = '';
+                    for (const option of jawabanOptions) {
+                        if (currentSoal.jawaban[option]?.text === '-') {
+                            pilihan = option;
+                            break;
+                        }
+                    }
+                    if (!pilihan) {
+                        continue;
+                    }
+                    const jawabanHTML = isi.trim() !== '' ? this.formatJawabanToHTML(isi) : '-';
+                    currentSoal.jawaban[pilihan] = {
+                        text: jawabanHTML,
+                        isCorrect: statusJawaban === 1,
+                    };
+                    if (statusJawaban === 1) {
+                        currentSoal.kunci = pilihan;
+                    }
+                }
+                else if (noSoal > 0 && !(jenis === 'SOAL' || jenis === 'JAWABAN')) {
+                    if (currentSoal && currentSoal.soal && currentSoal.soal.trim() !== '') {
+                        soalData.push(currentSoal);
+                    }
+                    currentSoal = null;
+                }
+            }
+            if (currentSoal && currentSoal.soal && currentSoal.soal.trim() !== '') {
+                soalData.push(currentSoal);
+            }
+            const validatedSoalData = soalData.filter((soal) => {
+                if (!soal.kunci) {
+                    for (const [key, jawaban] of Object.entries(soal.jawaban)) {
+                        if (jawaban.isCorrect) {
+                            soal.kunci = key;
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+                return true;
+            });
+            return response.json({
+                success: true,
+                data: validatedSoalData,
+                count: validatedSoalData.length,
+                warnings: validatedSoalData.length !== soalData.length
+                    ? `Beberapa soal tidak memiliki kunci jawaban yang valid (${soalData.length - validatedSoalData.length} soal diabaikan)`
+                    : null,
+            });
+        }
+        catch (error) {
+            logger.error({ err: error }, 'Gagal membaca file Excel');
+            return response.status(500).json({
+                success: false,
+                message: 'Gagal membaca file Excel: ' + error.message,
+            });
+        }
+    }
+    formatSoalToHTML(text) {
+        if (!text || text.trim() === '')
+            return '';
+        let html = text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+        html = html.replace(/\n/g, '<br>');
+        html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+        html = html.replace(/_(.*?)_/g, '<u>$1</u>');
+        html = html.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+        return `<div class="soal-content">${html}</div>`;
+    }
+    formatJawabanToHTML(text) {
+        if (!text || text.trim() === '' || text === '-')
+            return '-';
+        let html = text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+        html = html.replace(/\n/g, '<br>');
+        html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+        return `<div class="jawaban-content">${html}</div>`;
+    }
+    formatToHTML(text) {
+        if (!text)
+            return '';
+        let html = text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+        html = html.replace(/\n/g, '<br>');
+        html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+        html = html.replace(/_(.*?)_/g, '<u>$1</u>');
+        html = html.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+        return `<div class="soal-content">${html}</div>`;
     }
 }
 //# sourceMappingURL=bank_soals_controller.js.map

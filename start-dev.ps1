@@ -14,4 +14,4 @@ function Start-DevServer {
 }
 
 # <-- Tambahkan ini supaya langsung jalan saat file dijalankan
-Start-DevServer -Path "F:\Bank Project\2026\SMK-BINA-INDUSTRI"
+Start-DevServer -Path "G:\Bank Project\2026\SMK-BINA-INDUSTRI"

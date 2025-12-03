@@ -4,6 +4,7 @@ import { BaseModel, beforeCreate, belongsTo, column } from '@adonisjs/lucid/orm'
 import type { BelongsTo } from '@adonisjs/lucid/types/relations'
 import { randomUUID } from 'crypto'
 import DataGuru from './data_guru.js'
+import DataSiswa from './data_siswa.js'
 
 export default class DataKelas extends BaseModel {
   @column({ isPrimary: true })
@@ -134,5 +135,25 @@ export default class DataKelas extends BaseModel {
     })
 
     return result
+  }
+
+  public async getSiswaWithUsers() {
+    const siswaArray = this.getSiswaArray()
+    if (siswaArray.length === 0) return []
+
+    return await DataSiswa.query()
+      .whereIn('nisn', siswaArray)
+      .preload('user')
+      .orderBy('nisn', 'asc')
+  }
+
+  // Method: Dapatkan user IDs dari siswa di kelas ini
+  public async getUserIds(): Promise<string[]> {
+    const siswaArray = this.getSiswaArray()
+    if (siswaArray.length === 0) return []
+
+    const siswaUsers = await DataSiswa.query().whereIn('nisn', siswaArray).select('userId')
+
+    return siswaUsers.map((s) => s.userId)
   }
 }

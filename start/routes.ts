@@ -11,6 +11,7 @@ import './sa-routes.ts'
 import './admin-routes.ts'
 import './guru-routes.js'
 import './siswa-routes.js'
+import BankSoalsController from '#controllers/bank_soals_controller'
 
 router
   .group(() => {
@@ -37,6 +38,8 @@ router.post('/register', [AuthenticationController, 'register'])
 router.get('/penetapan', async () => {
   return await new AutomationPembayaranService().Penetapan()
 })
+
+router.post('/api/import-excel-preview', [BankSoalsController, 'previewExcelImport'])
 
 router.post('/switch/:role', async ({ params, session, response }) => {
   const role = params.role

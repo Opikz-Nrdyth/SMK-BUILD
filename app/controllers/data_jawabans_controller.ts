@@ -11,7 +11,6 @@ import { join } from 'node:path'
 import ExcelJS from 'exceljs'
 import DataGuru from '#models/data_guru'
 import DataSiswa from '#models/data_siswa'
-import DataMapel from '#models/data_mapel'
 
 export default class DataJawabansController {
   public async index({ request, inertia, session, auth }: HttpContext) {
@@ -161,6 +160,223 @@ export default class DataJawabansController {
       searchQuery: search,
       namaUjianFilter: namaUjian,
       listUjian,
+      auth: auth.user,
+    })
+  }
+
+  public async distroy({ params, response, session }: HttpContext) {
+    try {
+      const { userId, soalId } = params
+
+      const jawaban = await ManajemenKehadiran.query()
+        .where('userId', userId)
+        .andWhere('ujianId', soalId)
+        .firstOrFail()
+
+      if (String(jawaban.skor) == '0') {
+        const JawabanPath = jawaban.jawabanFile
+        const filePath = join(app.makePath('storage/jawaban'), JawabanPath)
+        try {
+          await fs.unlink(filePath)
+        } catch (err) {
+          if (err.code !== 'ENOENT') {
+            logger.error({ err }, 'Gagal hapus file')
+          }
+        }
+
+        await jawaban.delete()
+      } else {
+        await jawaban.merge({
+          skor: '0',
+        })
+      }
+
+      session.flash({
+        status: 'success',
+        message: 'Data Jawaban Siswa Berhasil Dihapus',
+      })
+    } catch (error) {
+      logger.error({ err: error }, `Gagal hapus data siswa`)
+      session.flash({
+        status: 'error',
+        message: `Data Jawaban Siswa Gagal Dihapus ${error.message}`,
+        error: error,
+      })
+    }
+    return response.redirect().withQs().back()
+  }
+
+  // Di DataJawabansController.ts
+  public async indexNilai({ request, inertia, session, auth }: HttpContext) {
+    await auth.check()
+
+    const page = request.input('page', 1)
+    const search = request.input('search', '')
+    const kelasId = request.input('kelas_id', '')
+    const ujianId = request.input('ujian_id', '')
+    const namaUjian = request.input('nama_ujian', '') // Untuk kompatibilitas dengan FE lama
+
+    // Get semua kelas untuk dropdown
+    const semuaKelas = await DataKelas.query()
+
+    let query = ManajemenKehadiran.query()
+      .preload('user', (user) => {
+        user.preload('dataSiswa')
+      })
+      .preload('ujian', (u) => {
+        u.preload('mapel')
+      })
+
+    // Filter 1: Berdasarkan kelas (jika dipilih)
+    let userIdsFromKelas: string[] = []
+    if (kelasId) {
+      const kelas = await DataKelas.find(kelasId)
+      if (kelas) {
+        const siswaArray = kelas.getSiswaArray() // NISN array
+
+        if (siswaArray.length > 0) {
+          // Dapatkan userId dari NISN
+          const siswaUsers = await DataSiswa.query().whereIn('nisn', siswaArray).select('userId')
+
+          userIdsFromKelas = siswaUsers.map((s) => s.userId)
+
+          if (userIdsFromKelas.length > 0) {
+            query.whereIn('userId', userIdsFromKelas)
+          } else {
+            // Jika tidak ada userId, return empty result
+            query.where('userId', 'no-user-found')
+          }
+        }
+      }
+    }
+
+    // Filter 2: Berdasarkan ujian (jika dipilih)
+    if (ujianId) {
+      query.where('ujianId', ujianId)
+    } else if (namaUjian) {
+      // Untuk backward compatibility
+      query.whereHas('ujian', (ujianQuery) => {
+        ujianQuery.where('id', `${namaUjian}`)
+      })
+    }
+
+    // Filter 3: Search nama siswa (jika ada)
+    if (search) {
+      query.whereHas('user', (userQuery) => {
+        userQuery.where('full_name', 'LIKE', `%${search}%`)
+      })
+    }
+
+    // Get ujian berdasarkan jenjang kelas (jika kelas dipilih)
+    let listUjian: BankSoal[] = []
+    if (kelasId) {
+      const kelas = await DataKelas.find(kelasId)
+      if (kelas) {
+        listUjian = await BankSoal.query()
+          .where('jenjang', kelas.jenjang)
+          .preload('mapel')
+          .orderBy('namaUjian', 'asc')
+      }
+    } else {
+      // Jika belum pilih kelas, tampilkan semua ujian
+      listUjian = await BankSoal.query().preload('mapel').orderBy('namaUjian', 'asc')
+    }
+
+    // Jika ujianId sudah dipilih, kita bisa preload data ujian yang dipilih
+    let selectedUjian = null
+    if (ujianId) {
+      selectedUjian = await BankSoal.query().where('id', ujianId).preload('mapel').first()
+    }
+
+    const kehadiranPaginate = await query.orderBy('created_at', 'desc').paginate(page, 15)
+
+    // Process statistics untuk setiap kehadiran
+    const kehadiransWithStats = await Promise.all(
+      kehadiranPaginate.all().map(async (kehadiran) => {
+        const kehadiranData = kehadiran.toJSON()
+
+        try {
+          const bankSoal = await BankSoal.find(kehadiran.ujianId)
+          let totalSoal = 0
+          let terjawab = 0
+
+          if (bankSoal && bankSoal.soalFile) {
+            const soalFilePath = join(app.makePath('storage/soal_files'), bankSoal.soalFile)
+            const encryptedSoalContent = await readFile(soalFilePath, 'utf-8')
+            const decryptedSoalContent = encryption.decrypt(encryptedSoalContent)
+            const soalArray =
+              typeof decryptedSoalContent === 'string'
+                ? JSON.parse(decryptedSoalContent)
+                : decryptedSoalContent
+
+            totalSoal = soalArray.filter(
+              (item: any) => item.selected && item.selected == true
+            ).length
+
+            if (kehadiran.jawabanFile) {
+              const jawabanFilePath = join(app.makePath('storage/jawaban'), kehadiran.jawabanFile)
+              const encryptedJawabanContent = await readFile(jawabanFilePath, 'utf-8')
+              const decryptedJawabanContent = encryption.decrypt(encryptedJawabanContent)
+              const jawabanArray =
+                typeof decryptedJawabanContent === 'string'
+                  ? JSON.parse(decryptedJawabanContent)
+                  : decryptedJawabanContent
+
+              if (Array.isArray(jawabanArray)) {
+                terjawab = jawabanArray.filter(
+                  (jawaban: any) => jawaban.jawaban && jawaban.jawaban.trim() !== ''
+                ).length
+              } else if (typeof jawabanArray === 'object' && jawabanArray !== null) {
+                const jawabanObj = Array.isArray(jawabanArray) ? jawabanArray[0] : jawabanArray
+                terjawab = Object.values(jawabanObj).filter((j: any) => j && j.trim() !== '').length
+              }
+            }
+          }
+
+          return {
+            ...kehadiranData,
+            totalSoal,
+            terjawab,
+            tidakTerjawab: totalSoal - terjawab,
+            nilai: kehadiran.skor,
+            status: kehadiran.skor && parseInt(kehadiran.skor) > 0 ? 'Selesai' : 'Belum Selesai',
+          }
+        } catch (error) {
+          logger.error({ err: error }, `Error processing kehadiran ${kehadiran.id}`)
+          return {
+            ...kehadiranData,
+            totalSoal: 0,
+            terjawab: 0,
+            tidakTerjawab: 0,
+            nilai: 0,
+            status: 'Error',
+          }
+        }
+      })
+    )
+
+    return inertia.render('Nilai/Index', {
+      kehadiranPaginate: {
+        currentPage: kehadiranPaginate.currentPage,
+        lastPage: kehadiranPaginate.lastPage,
+        total: kehadiranPaginate.total,
+        perPage: kehadiranPaginate.perPage,
+        firstPage: 1,
+        nextPage:
+          kehadiranPaginate.currentPage < kehadiranPaginate.lastPage
+            ? kehadiranPaginate.currentPage + 1
+            : null,
+        previousPage: kehadiranPaginate.currentPage > 1 ? kehadiranPaginate.currentPage - 1 : null,
+      },
+      kehadirans: kehadiransWithStats,
+      semuaKelas,
+      listUjian,
+      selectedUjian,
+      session: session.flashMessages.all(),
+      searchQuery: search,
+      kelasFilter: kelasId,
+      ujianFilter: ujianId,
+      namaUjianFilter: namaUjian,
       auth: auth.user,
     })
   }
@@ -520,44 +736,64 @@ export default class DataJawabansController {
     })
   }
 
+  // Di DataJawabansController.ts - update method export
   public async export({ response, request, auth, session }: HttpContext) {
     await auth.check()
-    const user = auth.user!
 
-    console.log(user)
+    // Ambil parameter filter dari query string
+    const { kelas: kelasId, ujian: ujianId, mapel: mapelId } = request.qs()
 
-    // Ambil parameter filter mapel dari query string
-    const { mapel: mapelId } = request.qs() // mapelId adalah ID mapel yang dipilih
-
-    // Validasi: mapel harus dipilih
-    if (!mapelId) {
+    // Validasi minimal filter
+    if (!mapelId && !ujianId && !kelasId) {
       session.flash({
         status: 'error',
-        message: 'Silakan pilih mata pelajaran terlebih dahulu',
+        message: 'Silakan pilih filter terlebih dahulu',
       })
       return response.redirect().back()
     }
 
-    // Query dasar
+    // Query dengan filter
     const query = ManajemenKehadiran.query()
       .preload('user', (q) => q.preload('dataSiswa'))
       .preload('ujian', (q) => q.preload('mapel'))
 
-    // Filter berdasarkan mapel yang dipilih dari query string
-    query.whereHas('ujian', (ujianQuery) => {
-      ujianQuery.whereHas('mapel', (mapelQuery) => {
-        mapelQuery.where('namaMataPelajaran', mapelId)
+    // Filter berdasarkan kelas
+    if (kelasId) {
+      const kelas = await DataKelas.find(kelasId)
+      if (kelas) {
+        const userIds = await kelas.getUserIds()
+        if (userIds.length > 0) {
+          query.whereIn('userId', userIds)
+        }
+      }
+    }
+
+    // Filter berdasarkan ujian
+    if (ujianId) {
+      query.where('ujianId', ujianId)
+    }
+
+    // Filter berdasarkan mapel
+    if (mapelId) {
+      query.whereHas('ujian', (ujianQuery) => {
+        ujianQuery.whereHas('mapel', (mapelQuery) => {
+          mapelQuery.where('namaMataPelajaran', mapelId)
+        })
       })
-    })
+    }
 
     const data = await query
 
-    // Dapatkan nama mapel untuk nama file
-
-    const mapelData = await DataMapel.query()
-      .where('namaMataPelajaran', 'LIKE', mapelId)
-      .firstOrFail()
-    const mapelName = mapelData?.namaMataPelajaran || 'unknown'
+    // Dapatkan informasi untuk nama file
+    let fileName = 'rapor_nilai'
+    if (kelasId) {
+      const kelas = await DataKelas.find(kelasId)
+      fileName += `_${kelas?.namaKelas || 'kelas'}`
+    }
+    if (ujianId) {
+      const ujian = await BankSoal.find(ujianId)
+      fileName += `_${ujian?.namaUjian || 'ujian'}`
+    }
 
     // Buat workbook dan worksheet
     const workbook = new ExcelJS.Workbook()
@@ -565,18 +801,31 @@ export default class DataJawabansController {
 
     // Header
     worksheet.columns = [
-      { header: 'Nama Siswa', key: 'nama', width: 25 },
+      { header: 'No', key: 'no', width: 5 },
       { header: 'NISN', key: 'nisn', width: 15 },
-      { header: 'Mata Pelajaran', key: 'mapel', width: 25 },
+      { header: 'Nama Siswa', key: 'nama', width: 25 },
+      { header: 'Kelas', key: 'kelas', width: 15 },
+      { header: 'Mata Pelajaran', key: 'mapel', width: 20 },
+      { header: 'Ujian', key: 'ujian', width: 25 },
       { header: 'Nilai', key: 'nilai', width: 10 },
       { header: 'Predikat', key: 'predikat', width: 12 },
+      { header: 'Tanggal', key: 'tanggal', width: 15 },
     ]
 
     // Loop isi data
+    let rowNumber = 1
     for (const item of data) {
       const nama = item.user?.fullName ?? '-'
       const nisn = item.user?.dataSiswa?.nisn ?? '-'
       const mapel = item.ujian?.mapel?.namaMataPelajaran ?? '-'
+      const ujian = item.ujian?.namaUjian ?? '-'
+
+      // Tentukan kelas dari data siswa jika ada
+      let kelas = '-'
+      if (kelasId) {
+        const kelasData = await DataKelas.find(kelasId)
+        kelas = kelasData?.namaKelas ?? '-'
+      }
 
       // Hitung nilai
       let nilai = 0
@@ -590,12 +839,29 @@ export default class DataJawabansController {
       const predikat =
         nilai >= 90 ? 'A' : nilai >= 80 ? 'B' : nilai >= 70 ? 'C' : nilai >= 60 ? 'D' : 'E'
 
-      worksheet.addRow({ nama, nisn, mapel, nilai, predikat })
+      worksheet.addRow({
+        no: rowNumber++,
+        nisn,
+        nama,
+        kelas,
+        mapel,
+        ujian,
+        nilai,
+        predikat,
+        tanggal: item.createdAt.toFormat('dd/MM/yyyy'),
+      })
     }
 
     // Styling header
-    worksheet.getRow(1).font = { bold: true }
-    worksheet.getRow(1).alignment = { horizontal: 'center' }
+    const headerRow = worksheet.getRow(1)
+    headerRow.font = { bold: true }
+    headerRow.alignment = { horizontal: 'center' }
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF6D28D9' }, // Purple
+    }
+    headerRow.font = { color: { argb: 'FFFFFFFF' }, bold: true }
 
     // Set response
     response.header(
@@ -605,7 +871,7 @@ export default class DataJawabansController {
 
     response.header(
       'Content-Disposition',
-      `attachment; filename="rapor_${mapelName}_${DateTime.now().toFormat('yyyyLLdd_HHmm')}.xlsx"`
+      `attachment; filename="${fileName}_${DateTime.now().toFormat('yyyyLLdd_HHmm')}.xlsx"`
     )
 
     const buffer = await workbook.xlsx.writeBuffer()
